@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: JS unit tests
+        run: npm test
+      - name: Python tests
+        run: python -I -m unittest discover -s tests -p "test_*.py"
+      - name: Validate content
+        run: python manage.py validate
+      - name: Guardrails (no innerHTML / eval / inline handlers / external hosts)
+        run: python tools/check_guardrails.py

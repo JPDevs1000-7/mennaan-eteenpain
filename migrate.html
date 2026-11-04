@@ -1,0 +1,23 @@
+<!doctype html>
+<!--
+  UC-4 domain migration. Deploy THIS file as index.html on the OLD domain, with js/migrate.js next to it.
+  Set data-target to the new app URL (https only). Query string and hash are passed through unchanged,
+  so old Magic State Links keep working.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>Daily Together has moved</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/migrate.js"></script>
+</head>
+<body>
+  <main id="app" data-target="https://example.invalid/">
+    <h1>Daily Together has moved</h1>
+    <p>If you are not taken there automatically, <a id="go" href="https://example.invalid/">open the new address</a>.</p>
+  </main>
+</body>
+</html>

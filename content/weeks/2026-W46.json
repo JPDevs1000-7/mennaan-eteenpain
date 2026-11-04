@@ -1,0 +1,62 @@
+{
+  "week_id": "2026-W46",
+  "theme": "Shared Memories",
+  "questions": [
+    {
+      "day_of_week": 1,
+      "id": "q-2026-w46-1",
+      "translations": {
+        "fi": { "text": "Mikä on lempimuistosi ensimmäisestä yhteisestä vuodestanne?" },
+        "en": { "text": "What is your favourite memory from your first year together?" }
+      }
+    },
+    {
+      "day_of_week": 2,
+      "id": "q-2026-w46-2",
+      "translations": {
+        "fi": { "text": "Minkä yhteisen matkan tai retken muistat parhaiten, ja miksi?" },
+        "en": { "text": "Which trip or outing together do you remember best, and why?" }
+      }
+    },
+    {
+      "day_of_week": 3,
+      "id": "q-2026-w46-3",
+      "translations": {
+        "fi": { "text": "Mikä yhteinen hetki sai teidät nauramaan kaikkein eniten?" },
+        "en": { "text": "Which moment together made you laugh the most?" }
+      }
+    },
+    {
+      "day_of_week": 4,
+      "id": "q-2026-w46-4",
+      "translations": {
+        "fi": { "text": "Mikä vaikea hetki toi teidät lopulta lähemmäs toisianne?" },
+        "en": { "text": "Which difficult time ended up bringing you closer together?" }
+      }
+    },
+    {
+      "day_of_week": 5,
+      "id": "q-2026-w46-5",
+      "translations": {
+        "fi": { "text": "Mikä yhteinen perinne teillä on, tai minkä haluaisitte aloittaa?" },
+        "en": { "text": "What tradition do you share, or what tradition would you like to start?" }
+      }
+    },
+    {
+      "day_of_week": 6,
+      "id": "q-2026-w46-6",
+      "translations": {
+        "fi": { "text": "Mitä muistoa haluaisit katsoa yhdessä valokuvien kautta?" },
+        "en": { "text": "Which memory would you like to look back on together through old photos?" }
+      }
+    },
+    {
+      "day_of_week": 7,
+      "id": "q-2026-w46-7",
+      "translations": {
+        "fi": { "text": "Minkä uuden muiston haluaisit luoda kumppanisi kanssa ensi kuun aikana?" },
+        "en": { "text": "What new memory would you like to create with your partner next month?" }
+      }
+    }
+  ]
+}

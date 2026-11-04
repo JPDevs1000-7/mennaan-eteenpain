@@ -1,0 +1,62 @@
+{
+  "week_id": "2026-W45",
+  "theme": "Expressing Appreciation",
+  "questions": [
+    {
+      "day_of_week": 1,
+      "id": "q-2026-w45-1",
+      "translations": {
+        "fi": { "text": "Mikä on yksi pieni asia, jonka kumppanisi teki viime aikoina ja joka sai sinut tuntemaan itsesi todella arvostetuksi?" },
+        "en": { "text": "What is one small thing your partner did recently that made you feel truly appreciated?" }
+      }
+    },
+    {
+      "day_of_week": 2,
+      "id": "q-2026-w45-2",
+      "translations": {
+        "fi": { "text": "Mitä kumppanissasi arvostat eniten silloin, kun asiat ovat vaikeita?" },
+        "en": { "text": "What do you value most about your partner when things get difficult?" }
+      }
+    },
+    {
+      "day_of_week": 3,
+      "id": "q-2026-w45-3",
+      "translations": {
+        "fi": { "text": "Milloin viimeksi kiitit kumppaniasi jostakin arkisesta asiasta, ja miltä se tuntui?" },
+        "en": { "text": "When did you last thank your partner for something ordinary, and how did it feel?" }
+      }
+    },
+    {
+      "day_of_week": 4,
+      "id": "q-2026-w45-4",
+      "translations": {
+        "fi": { "text": "Millä tavalla haluat, että sinulle osoitetaan arvostusta: sanoilla, teoilla, ajalla vai jotenkin muuten?" },
+        "en": { "text": "In what way do you most like to be shown appreciation: words, actions, time, or something else?" }
+      }
+    },
+    {
+      "day_of_week": 5,
+      "id": "q-2026-w45-5",
+      "translations": {
+        "fi": { "text": "Mikä kumppanisi piirre on muuttunut sinulle ajan myötä entistä tärkeämmäksi?" },
+        "en": { "text": "Which of your partner's qualities has become more important to you over time?" }
+      }
+    },
+    {
+      "day_of_week": 6,
+      "id": "q-2026-w45-6",
+      "translations": {
+        "fi": { "text": "Mikä pieni ele viikonloppuna saisi kumppanisi tuntemaan itsensä arvostetuksi?" },
+        "en": { "text": "What small gesture this weekend would make your partner feel appreciated?" }
+      }
+    },
+    {
+      "day_of_week": 7,
+      "id": "q-2026-w45-7",
+      "translations": {
+        "fi": { "text": "Kerro kumppanillesi kolme asiaa, joista olet hänelle kiitollinen. Mitä hän vastasi?" },
+        "en": { "text": "Tell your partner three things you are grateful to them for. How did they respond?" }
+      }
+    }
+  ]
+}
