@@ -1,7 +1,7 @@
 // UI layer. Builds DOM with textContent only (never innerHTML): link data is untrusted input.
 
 import { LANGS, StateError, buildLink, decodeLink } from './codec.js';
-import { addDays, diffDays, localISODate, parseISODate } from './dates.js';
+import { addDays, localISODate, parseISODate } from './dates.js';
 import { LANG_NAMES, detectLang, t } from './i18n.js';
 import { STATUS, complete, computeStreaks } from './streaks.js';
 import { buildSequence, getTimeline } from './timeline.js';
@@ -54,9 +54,11 @@ function validState(s) {
 
 const L = (key) => t(state?.lang ?? detectLang(), key);
 const announce = (msg) => { live.textContent = ''; setTimeout(() => { live.textContent = msg; }, 50); };
-const saveState = () => writeJSON(STATE_KEY, state);
+// The email is kept on the device only if the user opted in (meta.rememberEmail).
+const saveState = () => writeJSON(STATE_KEY, { ...state, email: meta.rememberEmail ? state.email : '' });
 const saveMeta = () => writeJSON(META_KEY, meta);
 const questionText = (q) => (q.translations[state.lang] ?? q.translations.en)?.text ?? '';
+const themeText = (q) => q.theme?.[state.lang] ?? q.theme?.en ?? '';
 
 // ---------- views ----------
 function statusBadge(code) {
@@ -91,7 +93,7 @@ function renderHeader() {
     h('h1', {}, L('appName')),
     h('div', { class: 'row', role: 'group', 'aria-label': L('language') },
       LANGS.map((l) => h('button', {
-        class: `btn small${l === state.lang ? ' on' : ''}`, type: 'button', lang: l,
+        id: `lang-${l}`, class: `btn small${l === state.lang ? ' on' : ''}`, type: 'button', lang: l,
         'aria-pressed': String(l === state.lang),
         onclick: () => { state.lang = l; saveState(); document.documentElement.lang = l; render(); },
       }, LANG_NAMES[l]))));
@@ -101,17 +103,18 @@ function completeDay(index) {
   state.history = complete(state.history, index, state.startDate, localISODate(), addDays);
   saveState();
   render();
+  document.getElementById(`day-${index}`)?.focus({ preventScroll: true }); // the clicked button is gone
   announce(L('completedAnnounce'));
 }
 
 function dayCard(day, { isToday }) {
   const status = state.history[day.index] ?? STATUS.PENDING;
-  return h('article', { class: `card${isToday ? ' today' : ''}` },
-    h('p', { class: 'meta' }, `${L('day')} ${day.index + 1} · ${L('theme')}: ${day.question.theme} · ${L('released')} ${day.releaseDate}`),
+  return h('article', { id: `day-${day.index}`, tabindex: '-1', class: `card${isToday ? ' today' : ''}` },
+    h('p', { class: 'meta' }, `${L('day')} ${day.index + 1} · ${L('theme')}: ${themeText(day.question)} · ${L('released')} ${day.releaseDate}`),
     h('p', { class: 'question', lang: state.lang }, questionText(day.question)),
     h('p', {}, statusBadge(status)),
     status === STATUS.PENDING && h('button', {
-      class: 'btn big', type: 'button', onclick: () => completeDay(day.index),
+      id: `complete-${day.index}`, class: 'btn big', type: 'button', onclick: () => completeDay(day.index),
     }, isToday ? L('markCompleted') : L('markCompletedLate')));
 }
 
@@ -135,51 +138,69 @@ function renderNudge() {
     h('div', { class: 'row' },
       h('a', { class: 'btn', href: '#backup' }, L('nudgeAction')),
       h('button', {
-        class: 'btn secondary', type: 'button',
+        id: 'nudge-dismiss', class: 'btn secondary', type: 'button',
         onclick: () => { meta.nudgeDismissedAt = Date.now(); saveMeta(); render(); },
       }, L('nudgeDismiss'))));
 }
 
-async function copyLink(link, { backup }) {
+function setBackupStatus(message) {
+  const el = document.getElementById('backup-status');
+  if (el) el.textContent = message; // visible message, also announced below
+  announce(message);
+}
+
+async function createAndCopy({ share }) {
+  const base = location.origin + location.pathname; // runtime origin: domain agnostic
+  let link;
+  try {
+    link = buildLink(base, state, { share });
+  } catch (e) {
+    if (!(e instanceof StateError)) throw e;
+    setBackupStatus(L('linkFailed'));
+    return;
+  }
   lastLink = link;
-  if (backup) { meta.lastBackupAt = Date.now(); saveMeta(); }
+  if (!share) { meta.lastBackupAt = Date.now(); saveMeta(); }
   let ok = false;
   try { await navigator.clipboard.writeText(link); ok = true; } catch { /* fall back to manual copy */ }
   const box = document.getElementById('link-box');
   if (box) { box.value = link; box.select(); }
-  announce(ok ? L('copied') : L('copyFailed'));
+  setBackupStatus(ok ? L('copied') : L('copyFailed'));
 }
 
 function renderBackup() {
-  const base = location.origin + location.pathname; // runtime origin: domain agnostic
   const email = h('input', {
-    id: 'email', type: 'email', autocomplete: 'email', value: state.email ?? '', maxlength: '120',
+    id: 'email', type: 'email', autocomplete: 'email', value: state.email ?? '',
+    maxlength: '80', // 80 UTF-16 units is at most 240 UTF-8 bytes, under the codec's 255-byte limit
+    oninput: (e) => { state.email = e.target.value.trim(); if (meta.rememberEmail) saveState(); },
   });
-  const readEmail = () => { state.email = email.value.trim(); saveState(); };
+  const remember = h('input', {
+    id: 'remember-email', type: 'checkbox', checked: Boolean(meta.rememberEmail),
+    onchange: (e) => { meta.rememberEmail = e.target.checked; saveMeta(); saveState(); },
+  });
   return h('section', { id: 'backup', 'aria-labelledby': 'backup-h' },
     h('h2', { id: 'backup-h' }, L('backupHeading')),
     h('p', {}, L('backupIntro')),
     h('label', { for: 'email' }, L('emailLabel')),
     email,
+    h('label', { class: 'check', for: 'remember-email' }, remember, ' ', L('rememberEmail')),
     h('div', { class: 'row' },
-      h('button', {
-        class: 'btn', type: 'button',
-        onclick: () => { readEmail(); copyLink(buildLink(base, state), { backup: true }); },
-      }, L('copyBackup')),
-      h('button', {
-        class: 'btn secondary', type: 'button',
-        onclick: () => { readEmail(); copyLink(buildLink(base, state, { share: true }), { backup: false }); },
-      }, L('copyShare'))),
+      h('button', { id: 'copy-backup', class: 'btn', type: 'button', onclick: () => createAndCopy({ share: false }) },
+        L('copyBackup')),
+      h('button', { id: 'copy-share', class: 'btn secondary', type: 'button', onclick: () => createAndCopy({ share: true }) },
+        L('copyShare'))),
+    h('p', { id: 'backup-status', role: 'status' }),
     h('p', { class: 'note' }, L('shareNote')),
     h('label', { for: 'link-box' }, L('linkLabel')),
     h('textarea', { id: 'link-box', readonly: true, rows: '3' }, lastLink));
 }
 
 function render() {
+  const focusedId = document.activeElement?.id; // re-rendering destroys elements; restore focus below
   document.documentElement.lang = state.lang;
   const today = localISODate();
   const tl = getTimeline(sequence, state.startDate, today);
-  const streaks = computeStreaks(state.history, Math.max(0, tl.todayIndex));
+  const streaks = computeStreaks(state.history, tl.lastIndex);
   const latest = tl.days[tl.days.length - 1];
   const earlier = tl.days.slice(0, -1).reverse();
 
@@ -207,6 +228,7 @@ function render() {
       h('p', {}, L('bonusIntro')),
       h('ul', { class: 'bonus' }, tl.bonus.map((q) => h('li', { lang: state.lang }, questionText(q))))),
   ].filter(Boolean)); // null/false would otherwise be rendered as the text "null"/"false"
+  if (focusedId) (document.getElementById(focusedId) ?? root).focus({ preventScroll: true });
 }
 
 // ---------- boot ----------
@@ -240,6 +262,7 @@ async function boot() {
   const stored = readJSON(STATE_KEY);
   state = validState(stored) ? stored : null;
   meta = readJSON(META_KEY) ?? {};
+  if (state && !meta.rememberEmail && state.email) { state.email = ''; saveState(); }
 
   const linkResult = applyIncomingLink();
   try {

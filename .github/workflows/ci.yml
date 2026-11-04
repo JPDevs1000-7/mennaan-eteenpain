@@ -19,11 +19,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: JS unit tests
-        run: npm test
-      - name: Python tests
-        run: python -I -m unittest discover -s tests -p "test_*.py"
-      - name: Validate content
-        run: python manage.py validate
-      - name: Guardrails (no innerHTML / eval / inline handlers / external hosts)
-        run: python tools/check_guardrails.py
+      - name: Run all checks
+        run: python tools/run_checks.py

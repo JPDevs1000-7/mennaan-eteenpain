@@ -27,6 +27,7 @@ test('bundled content matches the manifest and the supported languages', () => {
     const data = JSON.parse(readFileSync(`content/weeks/${week}.json`, 'utf8'));
     assert.equal(data.week_id, week);
     assert.equal(data.questions.length, 7);
+    for (const lang of manifest.languages) assert.ok(data.theme[lang]?.trim(), `${week} theme missing ${lang}`);
     for (const q of data.questions) {
       for (const lang of manifest.languages) assert.ok(q.translations[lang]?.text?.trim(), `${q.id} missing ${lang}`);
     }
