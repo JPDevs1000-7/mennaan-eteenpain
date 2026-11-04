@@ -10,6 +10,7 @@ Translation uses the Anthropic API when ANTHROPIC_API_KEY is set. Without a key,
 untranslated content can never be published by accident.
 """
 import argparse
+import datetime
 import json
 import os
 import re
@@ -21,7 +22,7 @@ ROOT = Path(__file__).resolve().parent
 CONTENT = ROOT / "content"
 WEEKS = CONTENT / "weeks"
 MANIFEST = CONTENT / "manifest.json"
-WEEK_RE = re.compile(r"^(\d{4})-W(0[1-9]|[1-4]\d|5[0-3])$")
+WEEK_RE = re.compile(r"(\d{4})-W(0[1-9]|[1-4]\d|5[0-3])")
 PLACEHOLDER = "TODO"
 QUESTIONS_PER_WEEK = 7
 MODEL = "claude-sonnet-5-5"
@@ -35,33 +36,67 @@ def write_json(path, data):
     Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def iso_weeks_in_year(year):
+    """Number of ISO weeks (52 or 53) in a year."""
+    return datetime.date(year, 12, 28).isocalendar()[1]
+
+
+def valid_week_id(week_id):
+    m = WEEK_RE.fullmatch(week_id) if isinstance(week_id, str) else None
+    return bool(m) and int(m.group(2)) <= iso_weeks_in_year(int(m.group(1)))
+
+
+def text_of(entry):
+    """The 'text' of a {'text': ...} entry, or '' if the entry is malformed."""
+    value = entry.get("text", "") if isinstance(entry, dict) else ""
+    return value.strip() if isinstance(value, str) else ""
+
+
+def check_text(label, text, errors):
+    if not text:
+        errors.append(f"{label}: missing text")
+    elif text.startswith(PLACEHOLDER):
+        errors.append(f"{label}: text is still a placeholder")
+
+
 def validate_week(data, languages, name="week"):
-    """Return a list of human-readable problems (empty list = valid)."""
+    """Return a list of human-readable problems (empty list = valid). Never raises on bad content."""
     errors = []
+    if not isinstance(data, dict):
+        return [f"{name}: top level must be an object"]
     week_id = data.get("week_id", "")
-    if not WEEK_RE.match(str(week_id)):
+    if not valid_week_id(week_id):
         errors.append(f"{name}: invalid week_id {week_id!r}")
-    if not str(data.get("theme", "")).strip():
-        errors.append(f"{name}: missing theme")
+    theme = data.get("theme")
+    if not isinstance(theme, dict):
+        errors.append(f"{name}: theme must be an object with one text per language")
+        theme = {}
+    for lang in languages:
+        value = theme.get(lang, "")
+        check_text(f"{name} theme.{lang}", value.strip() if isinstance(value, str) else "", errors)
     questions = data.get("questions", [])
+    if not isinstance(questions, list):
+        return errors + [f"{name}: questions must be a list"]
     if len(questions) != QUESTIONS_PER_WEEK:
         errors.append(f"{name}: expected {QUESTIONS_PER_WEEK} questions, found {len(questions)}")
     seen_days, seen_ids = set(), set()
     for q in questions:
+        if not isinstance(q, dict):
+            errors.append(f"{name}: every question must be an object")
+            continue
         day, qid = q.get("day_of_week"), q.get("id", "")
-        if day not in range(1, 8) or day in seen_days:
+        if type(day) is not int or day not in range(1, 8) or day in seen_days:
             errors.append(f"{name}: bad or duplicate day_of_week {day!r}")
-        seen_days.add(day)
+        else:
+            seen_days.add(day)
         expected_id = f"q-{str(week_id).lower()}-{day}"
         if qid != expected_id or qid in seen_ids:
             errors.append(f"{name}: id {qid!r} should be {expected_id!r} and unique")
         seen_ids.add(qid)
+        translations = q.get("translations", {})
+        translations = translations if isinstance(translations, dict) else {}
         for lang in languages:
-            text = str(q.get("translations", {}).get(lang, {}).get("text", "")).strip()
-            if not text:
-                errors.append(f"{qid}: missing {lang} text")
-            elif text.startswith(PLACEHOLDER):
-                errors.append(f"{qid}: {lang} text is still a placeholder")
+            check_text(f"{qid} {lang}", text_of(translations.get(lang)), errors)
     return errors
 
 
@@ -74,8 +109,12 @@ def validate_all(content_dir=CONTENT):
     if sorted(manifest["weeks"]) != on_disk:
         errors.append(f"manifest weeks {sorted(manifest['weeks'])} do not match files {on_disk}; run `manifest`")
     for week_id in on_disk:
-        data = load_json(content_dir / "weeks" / f"{week_id}.json")
-        if data.get("week_id") != week_id:
+        try:
+            data = load_json(content_dir / "weeks" / f"{week_id}.json")
+        except (OSError, ValueError) as exc:
+            errors.append(f"{week_id}.json: cannot be read as JSON ({exc})")
+            continue
+        if isinstance(data, dict) and data.get("week_id") != week_id:
             errors.append(f"{week_id}.json: week_id does not match file name")
         errors += validate_week(data, languages, name=f"{week_id}.json")
     return errors
@@ -89,12 +128,15 @@ def rebuild_manifest():
 
 
 def translate(texts, source, targets):
-    """Translate a list of texts with the Anthropic API. Returns {lang: [texts]} or None."""
+    """Translate texts with the Anthropic API. Returns {lang: [texts]}, or None when no API key is set.
+
+    Raises TranslationError for any failure (network, HTTP, bad reply) so the caller can fall back.
+    """
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         return None
     prompt = (
-        f"Translate these {len(texts)} couple-conversation prompts from '{source}' into the language codes "
+        f"Translate these {len(texts)} short texts from '{source}' into the language codes "
         f"{targets}. Keep the warm, natural tone. Reply with ONLY a JSON object mapping each language code "
         f"to a list of {len(texts)} strings in the same order.\n\n" + json.dumps(texts, ensure_ascii=False)
     )
@@ -103,18 +145,28 @@ def translate(texts, source, targets):
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages", data=body, method="POST",
         headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        reply = json.load(resp)["content"][0]["text"]
-    result = json.loads(reply[reply.index("{"): reply.rindex("}") + 1])
-    for lang in targets:
-        if len(result.get(lang, [])) != len(texts):
-            raise ValueError(f"translation for {lang} has the wrong number of items")
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            reply = json.load(resp)["content"][0]["text"]
+        result = json.loads(reply[reply.index("{"): reply.rindex("}") + 1])
+        for lang in targets:
+            items = result.get(lang)
+            if not isinstance(items, list) or len(items) != len(texts):
+                raise ValueError(f"translation for {lang} has the wrong number of items")
+            if not all(isinstance(item, str) and item.strip() for item in items):
+                raise ValueError(f"translation for {lang} contains an empty or non-text item")
+    except (OSError, ValueError, KeyError, IndexError, TypeError) as exc:  # URLError and HTTPError are OSError
+        raise TranslationError(str(exc)) from exc
     return result
 
 
+class TranslationError(Exception):
+    pass
+
+
 def cmd_new_week(args):
-    if not WEEK_RE.match(args.week):
-        sys.exit(f"Invalid --week {args.week!r}; expected e.g. 2026-W34")
+    if not valid_week_id(args.week):
+        sys.exit(f"Invalid --week {args.week!r}; expected a real ISO week such as 2026-W34")
     path = WEEKS / f"{args.week}.json"
     if path.exists() and not args.force:
         sys.exit(f"{path.name} already exists (use --force to overwrite)")
@@ -122,21 +174,32 @@ def cmd_new_week(args):
     languages = manifest["languages"]
     if args.primary not in languages:
         sys.exit(f"--primary must be one of {languages}")
+    if not args.theme.strip():
+        sys.exit("--theme must not be empty")
     texts = args.prompt or [input(f"Prompt {i} ({args.primary}): ").strip()
                             for i in range(1, QUESTIONS_PER_WEEK + 1)]
     if len(texts) != QUESTIONS_PER_WEEK or not all(texts):
         sys.exit(f"Exactly {QUESTIONS_PER_WEEK} non-empty prompts are required")
     others = [lang for lang in languages if lang != args.primary]
-    translated = None if args.no_translate else translate(texts, args.primary, others)
-    if translated is None and others:
+    translated = None
+    if others and not args.no_translate:
+        try:
+            # The theme is translated together with the prompts (it is the last item).
+            translated = translate([*texts, args.theme.strip()], args.primary, others)
+        except TranslationError as exc:
+            print(f"Translation failed ({exc}).")
+    if others and translated is None:
         print("No translation performed: placeholders written. Edit them before validating.")
+
+    def tr(lang, i):  # i indexes the texts list; the theme sits at index QUESTIONS_PER_WEEK
+        return translated[lang][i] if translated else f"{PLACEHOLDER}: translate to {lang}"
+
+    theme = {args.primary: args.theme.strip(), **{lang: tr(lang, QUESTIONS_PER_WEEK) for lang in others}}
     questions = []
-    for i, text in enumerate(texts, start=1):
-        tr = {args.primary: {"text": text}}
-        for lang in others:
-            tr[lang] = {"text": translated[lang][i - 1] if translated else f"{PLACEHOLDER}: translate to {lang}"}
-        questions.append({"day_of_week": i, "id": f"q-{args.week.lower()}-{i}", "translations": tr})
-    write_json(path, {"week_id": args.week, "theme": args.theme, "questions": questions})
+    for i, text in enumerate(texts):
+        translations = {args.primary: {"text": text}, **{lang: {"text": tr(lang, i)} for lang in others}}
+        questions.append({"day_of_week": i + 1, "id": f"q-{args.week.lower()}-{i + 1}", "translations": translations})
+    write_json(path, {"week_id": args.week, "theme": theme, "questions": questions})
     rebuild_manifest()
     print(f"Wrote {path.relative_to(ROOT)}. Review it, run `python manage.py validate`, then git commit and push.")
 
@@ -159,7 +222,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="cmd", required=True)
     nw = sub.add_parser("new-week", help="create a week of prompts")
     nw.add_argument("--week", required=True)
-    nw.add_argument("--theme", required=True)
+    nw.add_argument("--theme", required=True, help="theme in the primary language; it is translated too")
     nw.add_argument("--primary", default="fi", help="language the prompts are written in")
     nw.add_argument("--prompt", action="append", help="repeat 7 times instead of typing interactively")
     nw.add_argument("--no-translate", action="store_true")

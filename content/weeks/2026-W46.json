@@ -1,6 +1,9 @@
 {
   "week_id": "2026-W46",
-  "theme": "Shared Memories",
+  "theme": {
+    "fi": "Yhteiset muistot",
+    "en": "Shared Memories"
+  },
   "questions": [
     {
       "day_of_week": 1,

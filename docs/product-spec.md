@@ -35,7 +35,7 @@ Business logic only (presentation is in section 7):
 
 **UC-3 Generate and use a State Link**
 Two link types:
-- **Self-Backup:** includes the optional email `e`. May be emailed or copied.
+- **Self-Backup:** includes the optional email `e`. In the MVP it is copied to the clipboard (nothing is sent by email).
 - **Partner Share:** strips `e`. Avoids third-party GDPR consent issues and makes clear it is not a database sync.
 
 Flow:
@@ -81,7 +81,10 @@ Country + language mapping (fr-CA vs fr-FR); localized UI branding; regional que
 ```json
 {
   "week_id": "2026-W34",
-  "theme": "Expressing Appreciation",
+  "theme": {
+    "fi": "Arvostuksen osoittaminen",
+    "en": "Expressing Appreciation"
+  },
   "questions": [
     {
       "day_of_week": 1,
@@ -142,7 +145,10 @@ Resolved by the builder (implemented and tested; owner may overrule):
 10. **Links on project hosting:** links are built from `location.origin + location.pathname`, so they also work when the app lives under a sub-path such as GitHub Pages `/repo/`.
 11. **Finnish text:** the sample Finnish prompts and UI strings were written by the AI builder and should be reviewed by a native speaker.
 
-12. **Approver:** for now the project owner is the single human approver for every feature before it reaches production. The process must name the approver in one config place so it can change later.
+12. **Email on the device:** the optional email is kept in localStorage only if the user ticks "Remember my email on this device" (default off; unticking removes it). It is never sent anywhere.
+13. **Theme per language:** each week's `theme` is an object with one text per language, so Finnish users see a Finnish theme (Finnish-first rule).
+14. **Streaks and missing content:** streaks are measured only up to the last day that had a published question, so days without content never break a streak.
+15. **Approver:** for now the project owner is the single human approver for every feature before it reaches production. The process must name the approver in one config place so it can change later.
 
 Still open: none.
 

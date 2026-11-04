@@ -1,6 +1,9 @@
 {
   "week_id": "2026-W45",
-  "theme": "Expressing Appreciation",
+  "theme": {
+    "fi": "Arvostuksen osoittaminen",
+    "en": "Expressing Appreciation"
+  },
   "questions": [
     {
       "day_of_week": 1,

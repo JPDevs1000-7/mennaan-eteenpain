@@ -127,6 +127,16 @@ test('Day 1 is the first question of the start date week', () => {
   assert.equal(tl.days[2].releaseDate, '2026-11-12');
 });
 
+test('streak survives days with no published content', () => {
+  const tl = getTimeline(seq, '2026-11-09', '2026-11-25'); // 16 days in, only 7 questions
+  assert.equal(tl.lastIndex, 6);
+  const history = [1, 1, 1, 1, 1, 1, 1];
+  assert.equal(computeStreaks(history, tl.todayIndex).perfect.current, 0); // the old, wrong input
+  assert.equal(computeStreaks(history, tl.lastIndex).perfect.current, 7); // what the app now passes
+  assert.equal(getTimeline(seq, '2026-11-09', '2026-11-04').lastIndex, -1); // start in the future
+  assert.deepEqual(computeStreaks([], -1).rescued, { current: 0, best: 0 });
+});
+
 test('timeline stops when content runs out and flags it', () => {
   const tl = getTimeline(seq, '2026-11-09', '2026-11-25');
   assert.equal(tl.days.length, 7);

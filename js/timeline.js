@@ -27,13 +27,16 @@ export function getTimeline(sequence, startDate, today) {
   const offset = startOffset(sequence, startDate);
   const todayIndex = diffDays(startDate, today);
   const available = Math.max(0, sequence.length - offset);
-  const last = Math.min(todayIndex, available - 1);
+  const last = Math.max(-1, Math.min(todayIndex, available - 1));
   const days = [];
   for (let i = 0; i <= last; i++) {
     days.push({ index: i, releaseDate: addDays(startDate, i), question: sequence[offset + i] });
   }
   return {
     todayIndex,
+    // Last day that actually has a question. Streaks are measured up to here, so days with no
+    // published content never count against the user.
+    lastIndex: last,
     days,
     bonus: sequence.slice(0, offset),
     contentExhausted: todayIndex >= 0 && todayIndex > last,
