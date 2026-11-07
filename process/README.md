@@ -155,7 +155,7 @@ Two to five sentences: what this feature is and where the process stands.
 | `tools/run_checks.py`, CI, guardrails | Mechanical safety net | **Exists** |
 | Protected `main` ruleset | No direct pushes; `test` must pass | **Exists** |
 | `tools/check_feature.py` | Validates handoff files and status flow, criterion-to-test coverage, protected paths, the risk floor, the approver's GitHub approvals (read with `gh`), and the phase 4 deploy record (merged, deploy run succeeded); builds the reviewer's diff; writes `checks.md` | To build |
-| `CODEOWNERS` | Names the approver; guards the protected paths | To build |
+| `.github/CODEOWNERS` | Names the approver; guards the protected paths (enforced once the ruleset requires code-owner review) | **Exists** |
 | `process/<phase>/guide.md`, `template.md` and an empty `output/` | The instructions and the empty handoff file for each phase, and where its handoffs are saved | To build |
 | `process/INDEX.md` | One list of all features, for duplicate checks | To build |
 | Pull request template | Links the handoff files and the checklist | To build |

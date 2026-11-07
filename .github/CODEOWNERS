@@ -1,0 +1,16 @@
+# Code owners for Daily Together.
+#
+# This file is the one place that names the approver (process/README.md
+# section 2, docs/product-spec.md item 15). To change the approver, change the
+# handle below; nothing else needs editing. tools/check_feature.py reads the
+# approver from this line.
+#
+# One owner covers every path, including the protected paths in
+# process/README.md section 7. When a second approver joins, keep the protected
+# paths owner-only by adding them below this line with the owner's handle
+# (GitHub uses the last matching line).
+#
+# GitHub only enforces this file once the ruleset on `main` requires code-owner
+# review (deferred by the owner, process/README.md section 8).
+
+* @JPDevs1000-7
