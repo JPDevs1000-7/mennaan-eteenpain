@@ -42,7 +42,7 @@ The approver is named in **one place**, the `CODEOWNERS` file. An approval count
 | 3 | **Review**: automated verification, independent review, owner decision | `3-review/` | All checks green; reviewer findings resolved; owner records **approve** |
 | 4 | **Deploy**: merge, release to production, check the live site, roll back if needed | `4-deploy/` | Script: pull request merged, deploy workflow succeeded for the merge commit, live-site check recorded, outcome is `live` or `rolled-back` |
 
-A phase can end with **Stop**: parked, merged into an existing feature, or rejected, always with a written reason. The files stay in the repository.
+A phase can end with **Stop**: parked, merged into an existing feature, or rejected, always with a written reason. The files stay in the repository: a feature stopped in phase 1 is merged as a **stop record**, a pull request titled `<id> [stop record]: …` that adds only its `proposal.md` and its `INDEX.md` line, never code. In `INDEX.md` its outcome is `park` or `no-go`, so it cannot be mistaken for a feature that went live.
 
 ## 4. Folder structure
 
@@ -51,7 +51,7 @@ There is no separate folder for features. Each phase folder holds the *rules* of
 ```
 process/
   README.md                           this document (protected)
-  INDEX.md                            every feature, its phase, its outcome (open: updated in phase 4)
+  INDEX.md                            every feature, its phase, its outcome (open: written when a feature stops or after phase 4)
   1-propose/
     guide.md                          how a session runs this phase (protected)
     template.md                       the empty handoff file (protected)
@@ -91,6 +91,7 @@ Each feature gets one folder per phase inside that phase's `output/`, named by i
   4. **Confirmation:** the session reads the spec back in plain language: "Is this what you meant?" The answer is recorded as `confirmed_by_proposer`.
 - **Owner decision:** at `medium` or `high` risk the owner reads the proposal and approves the pull request on GitHub (go) or comments `stop` before building. (On a pull request the owner opened themselves, the owner's `go` is a comment, since GitHub does not allow self-approval.) The approval must refer to the proposal as it now stands; if `proposal.md` changes afterwards, the approval no longer counts. At `low`, building continues automatically, but see the risk floor in phase 2.
 - **A hard rule would be violated?** The feature stops. It becomes an **owner-only change**, decided outside this process.
+- **Stop record:** when the verdict is `park` or `no-go`, the session adds the feature's `INDEX.md` line, renames the pull request `<id> [stop record]: …` and marks it ready for review. The owner merges it, so the idea stays visible on `main` for later duplicate checks. `check_feature.py` allows a stop record to touch only `1-propose/output/<id>/` and its own `INDEX.md` line.
 - **Gate (script):** all required sections filled; verdict `go`; every hard rule answered; every new text in both languages; proposer confirmed; the owner's GitHub approval present when required.
 
 ### Phase 2: Build (`2-build/output/<id>/build.md` plus the code)
@@ -131,6 +132,7 @@ previous: none                # or the path of the file this one builds on
 Two to five sentences: what this feature is and where the process stands.
 ```
 
+- **Phase fields:** each phase's `template.md` may add its own header fields after these five (for example `verdict` and `risk` in `proposal.md`), so the script reads decisions from the header, not from prose.
 - **Self-contained:** a reader with no other context can understand it.
 - **`ready` before moving on:** the next phase refuses to start from a `draft` or `blocked` file.
 - **Revisions are commits;** nothing is silently overwritten.
@@ -185,6 +187,7 @@ Two to five sentences: what this feature is and where the process stands.
 10. **Reviewer independence:** the reviewer reads the proposal and the code diff only, never `build.md`.
 11. **Ruleset on `main` stays as it is for now.** Requiring an approval is deferred; it is easy to switch on later.
 12. **Owner-authored pull requests need no approval,** since GitHub does not allow self-approval. The script requires the owner's approval only on pull requests from other authors.
+13. **Stop record:** a feature stopped in phase 1 is still merged, as a pull request titled `<id> [stop record]: …` that holds only its `proposal.md` and its `INDEX.md` line (outcome `park` or `no-go`), never code. This keeps stopped ideas on `main` for duplicate checks.
 
 ## 11. Open questions
 
