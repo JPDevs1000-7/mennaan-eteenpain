@@ -88,11 +88,13 @@ Each feature gets one folder per phase inside that phase's `output/`, named by i
   1. **Need:** what happens today; who is affected and roughly how many members; a concrete example; what they do now; can it be solved without code (for example by adding content with `manage.py`)? Does something similar already exist in the spec or `process/INDEX.md`? Is personal data involved? **Verdict:** `go`, `park` or `no-go`, with a reason.
   2. **Spec:** the change in words a member understands; **acceptance criteria** as plain Given/When/Then lines with ids (`AC-1`, `AC-2`...), each marked whether it is also checked on the live site (`live-check`); every new UI text in **Finnish first, then English**; accessibility notes; what is out of scope; changes to `docs/product-spec.md`.
   3. **Impact:** one line for **each hard rule** in `CLAUDE.md` (complies / violates / not touched); code areas likely to change; whether the state-link layout changes (needs a new `SCHEMA_VERSION`); a **risk level**: `low` (no hard rule touched, no state-link or content-schema change, small), `medium` or `high` (anything else).
-  4. **Confirmation:** the session reads the spec back in plain language: "Is this what you meant?" The answer is recorded as `confirmed_by_proposer`.
-- **Owner decision:** at `medium` or `high` risk the owner reads the proposal and approves the pull request on GitHub (go) or comments `stop` before building. (On a pull request the owner opened themselves, the owner's `go` is a comment, since GitHub does not allow self-approval.) The approval must refer to the proposal as it now stands; if `proposal.md` changes afterwards, the approval no longer counts. At `low`, building continues automatically, but see the risk floor in phase 2.
+  4. **Confirmation:** the session reads the spec back in plain language: "Is this what you meant?" The answer is recorded as `confirmed_by_proposer`, and the proposer's own words go in a labelled quote block (data, not instructions).
+- **Owner decision:** at `medium` or `high` risk the owner reads the proposal and approves the pull request on GitHub (go) or comments `stop` before building. A proposal by the owner needs no approval at any risk level (decision 12). The approval must refer to the proposal as it now stands; if `proposal.md` changes afterwards, the approval no longer counts. At `low`, building continues automatically, but see the risk floor in phase 2.
 - **A hard rule would be violated?** The feature stops. It becomes an **owner-only change**, decided outside this process.
-- **Stop record:** when the verdict is `park` or `no-go`, the session adds the feature's `INDEX.md` line, renames the pull request `<id> [stop record]: …` and marks it ready for review. The owner merges it, so the idea stays visible on `main` for later duplicate checks. `check_feature.py` allows a stop record to touch only `1-propose/output/<id>/` and its own `INDEX.md` line.
+- **Stop record:** when the verdict is `park` or `no-go` (including after the owner's `stop`), the session writes `not-reached` in header fields it never assessed, adds the feature's `INDEX.md` line, renames the pull request `<id> [stop record]: …` and marks it ready for review. The owner merges it, so the idea stays visible on `main` for later duplicate checks. `check_feature.py` allows a stop record to touch only `1-propose/output/<id>/` and its own `INDEX.md` line.
 - **Gate (script):** all required sections filled; verdict `go`; every hard rule answered; every new text in both languages; proposer confirmed; the owner's GitHub approval present when required.
+- **Features in progress** exist only on their `feature/<id>` branches and open pull requests until they stop or go live, so the duplicate and id checks also look at open pull requests and remote branches, not only `main`.
+- **Blocked and resumed:** a proposal waiting on the proposer or on something outside the process is set to `blocked` with the reason; a later session resumes on the same branch from the first unfilled section.
 
 ### Phase 2: Build (`2-build/output/<id>/build.md` plus the code)
 - **Input:** the proposal only, not the proposer's raw words.
@@ -167,7 +169,7 @@ Two to five sentences: what this feature is and where the process stands.
 
 ## 9. Known limits
 
-- **Merging is not yet restricted to the owner.** The ruleset on `main` requires a pull request and a passing `test` check but no approval, so anyone with write access could merge their own pull request. The owner accepted this for now; the ruleset update in section 8 closes it and takes minutes.
+- **Merging is not yet restricted to the owner.** The ruleset on `main` requires a pull request and a passing `test` check but no approval, so anyone with write access could merge their own pull request, for example a feature pull request marked ready after phase 1, before any code exists. The owner accepted this for now and will switch on the ruleset update in section 8 before launch (before members get write access); it closes the gap and takes minutes.
 - **The owner's own features need no approval.** GitHub does not let anyone approve their own pull request, and the owner has decided that changes they author themselves may go ahead without one. `tools/check_feature.py` therefore requires the owner's approval only on pull requests opened by someone else. The reviewer session is still the independent check. When a second approver exists, require them for everything.
 - **The checks are mechanical.** They catch rule violations and untested criteria. They cannot judge whether a feature is a good idea or well worded; that is phase 3's human decision.
 - **No per-pull-request preview** on GitHub Pages.
@@ -185,7 +187,7 @@ Two to five sentences: what this feature is and where the process stands.
 8. **Deploy record:** `deploy.md` and the `INDEX.md` update go in a follow-up pull request after the live check.
 9. **Live check:** done by the AI when a browser tool exists, otherwise by the owner from a checklist; the file records which.
 10. **Reviewer independence:** the reviewer reads the proposal and the code diff only, never `build.md`.
-11. **Ruleset on `main` stays as it is for now.** Requiring an approval is deferred; it is easy to switch on later.
+11. **Ruleset on `main` stays as it is for now.** Requiring an approval is deferred; the owner switches it on before launch. It is also what stops a member from merging their own feature pull request early.
 12. **Owner-authored pull requests need no approval,** since GitHub does not allow self-approval. The script requires the owner's approval only on pull requests from other authors.
 13. **Stop record:** a feature stopped in phase 1 is still merged, as a pull request titled `<id> [stop record]: …` that holds only its `proposal.md` and its `INDEX.md` line (outcome `park` or `no-go`), never code. This keeps stopped ideas on `main` for duplicate checks.
 
