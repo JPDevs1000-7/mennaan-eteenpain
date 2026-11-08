@@ -98,9 +98,9 @@ Each feature gets one folder per phase inside that phase's `output/`, named by i
 
 ### Phase 2: Build (`2-build/output/<id>/build.md` plus the code)
 - **Input:** the proposal only, not the proposer's raw words.
-- **Work:** continue on branch `feature/<id>`; write a short task list; implement; add tests. Each test names its criterion in a comment (for example `// AC-2`).
+- **Work:** continue on branch `feature/<id>`; write a short task list; implement; add tests. Each test names its feature and criterion in a comment (for example `// F-20261110-reminder-banner AC-2`), since every feature has its own `AC-1`.
 - **Output:** what changed; which tests cover which criteria; anything that differs from the proposal and why.
-- **Gate:** `python tools/run_checks.py` passes; `tools/check_feature.py` confirms every criterion appears in at least one test and that no protected path changed. It also sets a **risk floor** from the files actually changed (for example `js/codec.js` or the content schema means at least `medium`). The floor can raise the proposal's risk level, never lower it. If the floor is higher than the proposed level and the owner's spec approval is missing, the gate fails.
+- **Gate:** `python tools/run_checks.py` passes; `tools/check_feature.py` confirms every criterion appears in at least one test and that no protected path changed. It also sets a **risk floor** from the files actually changed (the table is in `2-build/guide.md`; for example `js/codec.js` means `high`, the content schema at least `medium`). The floor can raise the proposal's risk level, never lower it. If the floor is higher than the proposed level and the owner's spec approval is missing, the gate fails.
 
 ### Phase 3: Review (`3-review/output/<id>/checks.md` and `review.md`)
 - **Automated (`checks.md`, written by a script):** all check results; diff summary (files, lines); confirmation that protected paths, the CSP and the guardrails are unchanged.
@@ -150,7 +150,7 @@ Two to five sentences: what this feature is and where the process stands.
 
 ## 7. Protected paths (a feature may never change these)
 
-`CLAUDE.md`, the rules in `process/` (`README.md` and every phase's `guide.md` and `template.md`), `tools/check_guardrails.py`, `tools/run_checks.py`, `tools/check_feature.py`, `.github/` (workflows and CODEOWNERS), and the Content-Security-Policy meta tag in the HTML files. The `output/` folders and `process/INDEX.md` are **not** protected: they are where a feature's own sessions write, and `tools/check_feature.py` allows a feature to touch only its own id's folders and its own `INDEX.md` line. A feature that needs a protected path to change is an **owner-only change**. The rule is enforced by CODEOWNERS and by `tools/check_feature.py`.
+`CLAUDE.md`, the rules in `process/` (`README.md` and every phase's `guide.md` and `template.md`), `tools/check_guardrails.py`, `tools/run_checks.py`, `tools/check_feature.py`, `package.json` (it holds the command that runs the JavaScript tests), `.github/` (workflows and CODEOWNERS), and the Content-Security-Policy meta tag in the HTML files. The `output/` folders and `process/INDEX.md` are **not** protected: they are where a feature's own sessions write, and `tools/check_feature.py` allows a feature to touch only its own id's folders and its own `INDEX.md` line. A feature that needs a protected path to change is an **owner-only change**. The rule is enforced by CODEOWNERS and by `tools/check_feature.py`.
 
 ## 8. What the automation must provide
 
