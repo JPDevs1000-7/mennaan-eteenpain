@@ -1,5 +1,7 @@
+import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -94,6 +96,26 @@ class Csp(unittest.TestCase):
 
 
 class Repository(unittest.TestCase):
+    def test_every_deployed_folder_is_scanned(self):
+        # The deploy step copies paths with `cp -r ... _site/`; every folder it copies must be scanned.
+        workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+        copy = re.search(r"cp -r (.+?) _site/", workflow)
+        self.assertIsNotNone(copy, "deploy copy step not found in pages.yml")
+        for item in copy.group(1).split():
+            if item.endswith(".html"):
+                self.assertIn(ROOT / item, g.SHIPPED, f"{item} is deployed but not scanned")
+            else:
+                self.assertIn(item, g.DEPLOYED_DIRS, f"{item}/ is deployed but not scanned")
+
+    def test_files_dropped_into_deployed_folders_are_scanned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for rel in ("index.html", "content/extra.html", "content/x.js", "js/deep/y.JS", "css/z.css", "content/data.json", "docs/n.html"):
+                (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                (root / rel).write_text("", encoding="utf-8")
+            found = {p.relative_to(root).as_posix() for p in g.shipped_files(root)}
+            self.assertEqual(found, {"index.html", "content/extra.html", "content/x.js", "js/deep/y.JS", "css/z.css"})
+
     def test_shipped_files_pass(self):
         result = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "check_guardrails.py")],
                                 capture_output=True, text=True, cwd=ROOT)

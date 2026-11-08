@@ -2,15 +2,28 @@
 """Fails CI when shipped code breaks the app's hard architecture and security rules.
 
 These rules protect users even when code is written by someone who cannot review it
-(see CLAUDE.md). Scans the files that get deployed: index.html, migrate.html, css/, js/.
+(see CLAUDE.md). Scans every page, script and stylesheet that gets deployed: every HTML file
+at the top level and every HTML, JS and CSS file in the folders .github/workflows/pages.yml
+copies (a test keeps DEPLOYED_DIRS in step with it), so a file dropped into one of those
+folders cannot go live unscanned.
 """
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SHIPPED = [ROOT / "index.html", ROOT / "migrate.html", *sorted((ROOT / "css").rglob("*.css")),
-           *sorted((ROOT / "js").rglob("*.js"))]
+DEPLOYED_DIRS = ("css", "js", "content")
+SCANNED_SUFFIXES = (".html", ".js", ".css")
+
+
+def shipped_files(root=ROOT):
+    files = set(root.glob("*.html"))
+    for folder in DEPLOYED_DIRS:
+        files.update(p for p in (root / folder).rglob("*") if p.is_file() and p.suffix.lower() in SCANNED_SUFFIXES)
+    return sorted(files)
+
+
+SHIPPED = shipped_files()
 
 I = re.I
 # (pattern, message, flags). Function( is case-sensitive: the lowercase keyword `function(` is everywhere.
@@ -95,7 +108,7 @@ def scan_text(name, suffix, text):
 def main():
     problems = []
     for path in SHIPPED:
-        problems += scan_text(str(path.relative_to(ROOT)), path.suffix, path.read_text(encoding="utf-8"))
+        problems += scan_text(str(path.relative_to(ROOT)), path.suffix.lower(), path.read_text(encoding="utf-8"))
     for p in problems:
         print("GUARDRAIL:", p)
     if problems:
