@@ -44,6 +44,52 @@ The approver is named in **one place**, the `CODEOWNERS` file. An approval count
 
 A phase can end with **Stop**: parked, merged into an existing feature, or rejected, always with a written reason. The files stay in the repository: a feature stopped in phase 1 or rejected by the owner in phase 3 is merged as a **stop record**, a pull request titled `<id> [stop record]: …` that adds only its handoff files (`proposal.md`, plus `review.md` after phase 3) and its `INDEX.md` line, never code. In `INDEX.md` its outcome is `park`, `no-go` or `rejected`, so it cannot be mistaken for a feature that went live. Once the feature branch holds code, the stop record is opened from a separate branch `stop/<id>` and the feature pull request is closed unmerged, so the code never reaches `main`.
 
+### The flow at a glance
+
+Every box is a fresh session, except the owner's decisions (diamonds). Arrows back to an earlier phase are the repair paths.
+
+```mermaid
+flowchart TD
+    idea([A member has an idea]) --> P1["Phase 1: Propose<br/>interview, proposal.md"]
+    P1 -->|"go, risk low<br/>or the owner's own"| P2
+    P1 -->|"go, risk medium or high"| OA{"Owner reads<br/>the proposal"}
+    P1 -->|"park or no-go"| STOP1[["Stop record<br/>(feature PR, no code)"]]
+    OA -->|approves| P2["Phase 2: Build<br/>code, tests, build.md"]
+    OA -->|"requests changes"| P1
+    OA -->|stop| STOP1
+    P2 -->|"proposal is wrong"| P1
+    P2 -->|"risk raised: waits for the owner's approval"| P2
+    P2 -->|ready| P3["Phase 3: Review round<br/>fresh reviewer, review.md"]
+    P3 -->|"findings to fix,<br/>or conflict with main"| P2
+    P3 -->|"proposal is wrong"| P1
+    P3 -->|"no open findings"| OD{"Owner decides<br/>on the PR"}
+    OD -->|"changes: become findings"| P2
+    OD -->|reject| STOP2[["Stop record from stop/id<br/>(feature PR closed, no code)"]]
+    P1 -->|"withdrawn after code exists"| STOP2
+    OD -->|approve| P4["Phase 4: Deploy<br/>owner merges, live check"]
+```
+
+### Which session runs next
+
+Whoever picks a feature up finds its state in the handoff files on its `feature/<id>` branch and in its pull request, then starts the session this table names. Each guide's Step 0 makes the same choice, so starting the wrong one only costs a message saying so.
+
+| Where the feature stands | Next | Guide section |
+|---|---|---|
+| An idea, nothing written yet | Phase 1 session with the proposer | Phase 1, Step 0 |
+| `proposal.md` is `draft` or `blocked` | Phase 1 session with the proposer | Phase 1, **Resuming** |
+| `proposal.md` is `ready`, owner's approval required and not yet on the current proposal | **The owner:** approve, request changes or comment `stop`; after changes or `stop`, a phase 1 session | Phase 1, **The owner's answer** |
+| `proposal.md` is `ready` (approved or no approval needed), no `build.md` | Phase 2 session | Phase 2, Step 0 |
+| `build.md` is `draft`, or `blocked` on something that is now resolved | Phase 2 session | Phase 2, **Resuming** |
+| `build.md` is `blocked` on a raised risk | **The owner:** approve the pull request or comment `stop` | Phase 2, Step 4 |
+| `build.md` or `review.md` blocked because the proposal is wrong | Phase 1 session with the proposer | Phase 1, **Reopened by a later phase** |
+| `build.md` is `ready`, no `review.md` | Phase 3 session, round 1 | Phase 3, Step 0 |
+| `review.md` has open findings without an answer, or the pull request conflicts with `main` | Phase 2 session | Phase 2, **Fixing review findings** |
+| `review.md` is `draft` and every open finding is answered | Phase 3 session, new round | Phase 3, **A new round** |
+| `review.md` is `blocked` on a raised risk | **The owner:** approve the pull request; then a phase 3 session | Phase 3, Step 0 |
+| `review.md` is `ready`, pull request ready for review | **The owner:** approve, request changes or comment `reject`; after changes or `reject`, a phase 3 session | Phase 3, **The owner's decision** |
+| The owner's approval is on the latest commit | Phase 4 session | Phase 4 guide (to be written) |
+| A stop record pull request is open | **The owner:** merge it (and close the feature pull request if it is still open) | Phase 1, **Stopping**; Phase 3, **Reject** |
+
 ## 4. Folder structure
 
 There is no separate folder for features. Each phase folder holds the *rules* of the phase (written once, owner-protected) and, in its `output/` folder, the *work* that phase produced for each feature.
@@ -166,7 +212,7 @@ Two to five sentences: what this feature is and where the process stands.
 | `tools/check_feature.py` | Validates handoff files and status flow, criterion-to-test coverage, protected paths, the risk floor, the approver's GitHub approvals (read with `gh`), and the phase 4 deploy record (merged, deploy run succeeded); builds the reviewer's diff; writes `checks.md` | To build |
 | `.github/CODEOWNERS` | Names the approver; guards the protected paths (enforced once the ruleset requires code-owner review) | **Exists** |
 | `process/<phase>/guide.md`, `template.md` and an empty `output/` | The instructions and the empty handoff file for each phase, and where its handoffs are saved | Phases 1 to 3 written; phase 4 to build |
-| `process/INDEX.md` | One list of all features, for duplicate checks | To build |
+| `process/INDEX.md` | One list of all finished features (live, rolled back or stopped), for duplicate checks | **Exists** (empty until the first feature finishes) |
 | Pull request template | Links the handoff files and the checklist | To build |
 | `/feature <phase> <id>` skill | Fresh-session entry for each phase; loads only what that phase may read | To build |
 | Ruleset update on `main` | Require one approval and code-owner review, so members with repo access cannot merge their own pull requests | **Deferred by the owner**; a quick GitHub setting, switch on before members get write access |
