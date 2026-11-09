@@ -25,7 +25,7 @@ script exists), never composed by the reviewer.
 ## Checks
 
 [fill]
-<!-- One line per round: round, commit, date, and pass or fail from checks.md. The details are in checks.md. -->
+<!-- One line per round: round, checked commit (the latest one outside this folder), date, and pass or fail from checks.md. The details are in checks.md, one section per round. -->
 
 ## Reviewer findings and answers
 
