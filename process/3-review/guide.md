@@ -26,9 +26,11 @@ Do not write anything until all of these hold. If one fails, stop and tell the p
 - The branch can be merged into `main` without conflicts (`gh pr view <number> --json mergeable` says `MERGEABLE`). If not, see **When main moves on**.
 - The `test` check on the pull request is green for the latest commit: `gh pr checks <number>`. A red check goes back to phase 2 without a review.
 
-Then:
-- **No `review.md` yet:** copy `process/3-review/template.md` to `process/3-review/output/<id>/review.md` and fill the header (`feature_id`, `created`, `previous`). This is round 1.
-- **`review.md` exists:** go to **A new round**.
+Then go by the state of `process/3-review/output/<id>/review.md`:
+- **No `review.md` yet:** copy `process/3-review/template.md` to `process/3-review/output/<id>/review.md` and fill the header (`feature_id`, `created`, `previous`). This is round 1; go on with Step 1.
+- **`status: ready`:** the review is waiting for the owner. Go to **The owner's decision**. Do not start a round, and do not commit anything.
+- **`status: blocked`:** read the reason in **Context for the next session**. If it still applies, stop and say so. If nothing has been committed outside this phase's files since the block (for example the owner has only approved the pull request), set `status: draft` and go on with Step 4 of the same round. Otherwise go to **A new round**.
+- **`status: draft`:** go to **A new round**.
 
 ## Step 1: Checks (`checks.md`)
 
@@ -101,7 +103,7 @@ You never mark your own work as passed, and you never record the owner's decisio
 
 A new round starts after a Build session has answered the findings, or after the owner requested changes.
 
-1. Check that `build.md` says `status: ready` again (Step 0) and that every open finding has an **Answer**. If not, the Build session is not finished; stop and say so. Coming back from **Blocked** with no new commit outside this phase's files (for example the owner has only approved the proposal), do not start a new round: check the reason no longer applies, set `status: draft` and go on with Step 4.
+1. Check that `build.md` says `status: ready` again (Step 0) and that every open finding has an **Answer**. If not, the Build session is not finished; stop and say so.
 2. Raise `review_round` by one and set `status: draft`.
 3. Do Steps 1 to 3 again, on the **whole** new diff, not only on the fixes. A fix can break something else.
 4. For each open finding, check the answer against the diff. Set **State** to `closed` if the fix is in the code, or if a "not fixed because…" answer convinces you. Otherwise leave it `open` and add a line to **Answer**: `round <n>: still open, <why>`. An answer is a claim by the builder; only the code proves it.
@@ -128,11 +130,13 @@ A rejected feature leaves a **stop record** on `main`, like a phase 1 stop (READ
 
 ## Blocked
 
-Set `status: blocked` when the review cannot go on for reasons outside the process: for example the risk floor needs the owner's approval of the proposal, or the review shows that the proposal itself is wrong (a criterion that contradicts the spec, a hard rule the proposal missed). Write the reason and what would unblock it in **Context for the next session**, commit and push. A wrong proposal is fixed in phase 1, then built again in phase 2, then reviewed in a new round. A blocked review is picked up later through **A new round**.
+Set `status: blocked` when the review cannot go on for reasons outside the process: for example the risk floor needs the owner's approval of the proposal, or the review shows that the proposal itself is wrong (a criterion that contradicts the spec, a hard rule the proposal missed). Write the reason and what would unblock it in **Context for the next session**, commit and push. A blocked review is picked up later through Step 0.
+
+**A wrong proposal** also goes in the findings table, as a `must-fix` whose **Where** is `proposal`, so the later sessions know what to change. The fix runs through three sessions: phase 1 reopens the proposal with the proposer (phase 1 guide, **Reopened by a later phase**), and the owner approves it again if required; a Build session updates the code and answers the finding (phase 2 guide, **Fixing review findings**); then a new round reviews the result.
 
 ## When main moves on
 
-Other features may reach `main` while this one is in review. The ruleset does not require the branch to be up to date, so that alone changes nothing. But if the pull request has **conflicts** with `main`, or a newer change on `main` touches the same files, a Build session merges `main` into the branch (phase 2 guide, **Resuming**), and then **A new round** reviews the whole diff again, because the merged result is new code. If the owner had already approved, that approval no longer counts, since it is not on the latest commit.
+Other features may reach `main` while this one is in review. The ruleset does not require the branch to be up to date, so that alone changes nothing. But if the pull request has **conflicts** with `main`, or a newer change on `main` touches the same files, a Build session merges `main` into the branch (phase 2 guide, **Fixing review findings**), and then a review round reviews the whole diff again, because the merged result is new code. This applies before round 1 too: stop, and do not create `review.md` until the conflict is resolved. If the owner had already approved, that approval no longer counts, since it is not on the latest commit.
 
 ## Gate
 
