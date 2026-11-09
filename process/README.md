@@ -244,6 +244,7 @@ Two to five sentences: what this feature is and where the process stands.
 14. **Review fixes:** the reviewer only reports. A resumed Build session fixes the findings and answers them in `review.md`; a new fresh reviewer session then reviews the whole new diff (2026-11-09).
 15. **Where the owner's decision is recorded:** in `deploy.md` (phase 4), not in `review.md`, because a commit after the approval would cancel it (2026-11-09).
 16. **Rejected in review:** a feature the owner rejects in phase 3 leaves a stop record like decision 13, holding `proposal.md`, `review.md` and its `INDEX.md` line (outcome `rejected`), never code (2026-11-09).
+17. **Stopping after code exists:** whenever a feature stops while its branch already holds code (the owner's `stop` on a raised risk, the proposer withdrawing, or a reopened proposal ending in `park` or `no-go`), the stop record is opened from a new branch `stop/<id>` like decision 16, holding only the handoff files and the `INDEX.md` line, and the feature pull request is closed unmerged. Unreviewed code never reaches `main` (2026-11-09).
 
 ## 11. Open questions
 
