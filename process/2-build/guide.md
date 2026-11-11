@@ -5,10 +5,10 @@ How a Claude session runs the second phase. The phase turns a confirmed proposal
 ## Before you start
 
 - **Run in Claude Code**, in a fresh session. The session must be able to save files, run `python` and `node`, and use `git` and `gh`.
-- **Check out** the existing branch `feature/<id>` and pull it. Never start a new branch: one branch and one pull request carry all four phases.
+- **Before checking out,** run `git fetch origin` and the protected-paths check in README section 7 against `origin/feature/<id>`. If it lists anything, stop without checking out and say which files it found. Then **check out** the existing branch `feature/<id>` and pull it. Never start a new branch: one branch and one pull request carry all four phases.
 - **Read only:** this guide, `process/2-build/template.md`, `process/README.md`, `CLAUDE.md`, `docs/product-spec.md`, `process/1-propose/output/<id>/proposal.md`, and the code and tests you need; when fixing review findings, also the findings table in `process/3-review/output/<id>/review.md`. Do not read other features' `output/` folders, and do not rely on memory of earlier sessions.
 - **Write only:** the app (`index.html` and `migrate.html` outside their CSP, `css/`, `js/`), `manage.py`, `tests/`, `content/`, `docs/product-spec.md` (only the changes the proposal lists), and `process/2-build/output/<id>/`. When fixing review findings, also the **Answer** column of the findings table in `process/3-review/output/<id>/review.md`, and nothing else in that file. Anything else, for example `package.json`, is out of bounds. A new page is also out of bounds: it only goes live if `.github/workflows/pages.yml` changes, which is protected, so it is an owner-only change.
-- **Never write:** `proposal.md` (any change to it cancels the owner's approval; see **When the proposal is wrong**), any protected path in README section 7 (`CLAUDE.md`, the rules in `process/`, `tools/`, `package.json`, `.github/`, the CSP), or another feature's files.
+- **Never write:** `proposal.md` (any change to it cancels the owner's approval; see **When the proposal is wrong**), any protected path in README section 7 (`CLAUDE.md` or `CLAUDE.local.md` in any folder, the rules in `process/`, `tools/`, `package.json`, `.github/`, `.claude/`, `.mcp.json`, `.vscode/`, `.devcontainer/`, the CSP), or another feature's files.
 
 ## The proposal is your only input
 
@@ -102,6 +102,6 @@ The phase is done when the gate passes. Until `tools/check_feature.py` exists, t
 - `build.md` has `status: ready` and no `[fill]` left.
 - `python tools/run_checks.py` passes on the latest commit (the `test` check on the pull request is green).
 - Every `AC-n` in the proposal appears in at least one test, marked with this feature's id.
-- No protected path changed, and nothing outside **Write only** apart from phase 1's files (and phase 3's, after a review round).
+- The protected-paths check in README section 7 is empty, and nothing outside **Write only** changed apart from phase 1's files (and phase 3's, after a review round).
 - `proposal.md` is unchanged since phase 1 ended (since the owner's approval, if one was required).
 - `risk_floor` is filled. If it is higher than the proposal's risk, the owner's approval is present (not needed when the proposer is the owner).

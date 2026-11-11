@@ -7,7 +7,7 @@ The phase runs in **rounds**. Each round is one fresh reviewer session: it recor
 ## Before you start
 
 - **Run in Claude Code**, in a fresh session. The session must be able to save files, run `python` and `node`, and use `git` and `gh`.
-- **Check out** the existing branch `feature/<id>` and pull it. Never start a new branch, except `stop/<id>` in **Reject**.
+- **Before checking out,** run `git fetch origin` and the protected-paths check in README section 7 against `origin/feature/<id>`. If it lists anything, stop without checking out: do not open, read or review the branch's files in this session. Tell the person running the session and the owner which files it found. Then **check out** the existing branch `feature/<id>` and pull it. Never start a new branch, except `stop/<id>` in **Reject**.
 - **Read only:** this guide, `process/3-review/template.md`, `process/README.md`, `CLAUDE.md`, `docs/product-spec.md`, `process/1-propose/output/<id>/proposal.md`, the code diff (Step 2), any code or test file in the repository you need for context, this feature's `process/3-review/output/<id>/` files from earlier rounds, and `.github/PULL_REQUEST_TEMPLATE/stop-record.md` in **Reject**.
 - **Never read** `build.md` (apart from its `status:` and `risk_floor:` lines, in Steps 0 and 3), any other file in `process/*/output/`, or the pull request's description and comments (apart from the owner's review in **The owner's decision**). They hold the builder's account of the work; you judge the work itself (README decision 10).
 - **Write only** inside `process/3-review/output/<id>/`. Never change code, tests, content, the spec or `proposal.md`, even to fix a typo: you report, a Build session fixes. The one exception is the stop record in **Reject**.
@@ -39,14 +39,14 @@ Then go by the state of `process/3-review/output/<id>/review.md`:
 **Do not run the branch's code on your computer** (no `run_checks.py`, `npm test` or `manage.py` from the branch): its tests and scripts were written in this feature and you have not reviewed them yet. The `test` check in CI runs exactly `tools/run_checks.py` on GitHub's machines, and its result can be trusted once item 2 shows that no protected path changed, because the workflow and the check scripts are protected paths.
 
 1. A heading `Round <n>`, then `commit: <hash>`, `date:` and `written_by: manual`. The commit is the **checked commit**: the latest one that changes anything other than this phase's own files, `git log -1 --format=%H -- . ":(exclude)process/3-review/output/<id>/**"`. The review's own commits come after it and change nothing that the checks look at.
-2. The protected paths changed, which must be empty: `git diff --name-only origin/main...HEAD -- CLAUDE.md process/README.md "process/*/guide.md" "process/*/template.md" tools/ package.json .github/`.
-3. Process files outside this feature's own folders, which must be empty (`INDEX.md` changes only in a stop record or in phase 4's follow-up): `git diff --name-only origin/main...HEAD -- process/ ":(exclude)process/*/output/<id>/**"`.
+2. The protected paths changed, which must be empty: the protected-paths check in README section 7, with `HEAD` as `<ref>`.
+3. Files outside what a feature may change, which must be empty. This is the phase 2 allowlist (**Write only** in its guide); `INDEX.md` changes only in a stop record or in phase 4's deploy record: `git diff --name-only origin/main...HEAD -- . ":(exclude)index.html" ":(exclude)migrate.html" ":(exclude)css/**" ":(exclude)js/**" ":(exclude)manage.py" ":(exclude)tests/**" ":(exclude)content/**" ":(exclude)docs/product-spec.md" ":(exclude)process/*/output/<id>/**"`.
 4. The CSP lines on `main` and on the branch: `git grep -i -h content-security-policy origin/main -- index.html migrate.html`, then the same with `HEAD` in place of `origin/main`. They must be identical.
 5. The `test` check result for the checked commit: `gh pr checks <number>`, or `gh run list --commit <hash> --workflow CI`.
 6. The changed files and lines: `git diff --stat origin/main...HEAD`.
 7. The criterion markers: `git grep -n "<id> AC-" -- tests/`.
 
-Add one line to the **Checks** section of `review.md`: round, checked commit, date, pass or fail. Fail means any of: a protected path or another feature's file changed, the CSP changed, the `test` check is not green, or a criterion in the proposal has no marker. A fail is a `must-fix` finding; keep reviewing so the Build session gets everything in one go. If item 2 is not empty, do not trust item 5.
+Add one line to the **Checks** section of `review.md`: round, checked commit, date, pass or fail. Fail means any of: a protected path or a file outside the allowlist (including another feature's files) changed, the CSP changed, the `test` check is not green, or a criterion in the proposal has no marker. A fail is a `must-fix` finding; keep reviewing so the Build session gets everything in one go. If item 2 is not empty, do not trust item 5.
 
 Commit `checks.md` and `review.md`.
 
@@ -143,6 +143,6 @@ Other features may reach `main` while this one is in review. The ruleset does no
 The phase is done when the gate passes. Until `tools/check_feature.py` exists, the owner checks the same list by hand:
 
 - `review.md` has `status: ready`, no `[fill]` left, and `open_findings: 0`, with every `must-fix` and `should-fix` row `closed`.
-- The last round in `checks.md` is for the checked commit (the latest one outside `process/3-review/output/<id>/`) and passes: `test` green, no protected path or other feature's file changed, CSP unchanged, every criterion marked in a test.
+- The last round in `checks.md` is for the checked commit (the latest one outside `process/3-review/output/<id>/`) and passes: `test` green, no protected path or file outside the allowlist changed, CSP unchanged, every criterion marked in a test.
 - `risk` is filled. If it is higher than the proposal's risk, the owner's approval of the proposal is present (not needed when the proposer is the owner).
 - The owner's newest review is an approval on the latest commit (`commit.oid` equals `headRefOid`); not needed when the owner opened the pull request.

@@ -201,7 +201,15 @@ Two to five sentences: what this feature is and where the process stands.
 
 ## 7. Protected paths (a feature may never change these)
 
-`CLAUDE.md`, the rules in `process/` (`README.md` and every phase's `guide.md` and `template.md`), `tools/check_guardrails.py`, `tools/run_checks.py`, `tools/check_feature.py`, `package.json` (it holds the command that runs the JavaScript tests), `.github/` (workflows and CODEOWNERS), and the Content-Security-Policy meta tag in the HTML files. The `output/` folders and `process/INDEX.md` are **not** protected: they are where a feature's own sessions write, and `tools/check_feature.py` allows a feature to touch only its own id's folders and its own `INDEX.md` line. A feature that needs a protected path to change is an **owner-only change**. The rule is enforced by CODEOWNERS and by `tools/check_feature.py`.
+`CLAUDE.md`, the rules in `process/` (`README.md` and every phase's `guide.md` and `template.md`), `tools/check_guardrails.py`, `tools/run_checks.py`, `tools/check_feature.py`, `package.json` (it holds the command that runs the JavaScript tests), `.github/` (workflows and CODEOWNERS), the Content-Security-Policy meta tag in the HTML files, and **tool configuration that loads by itself**: `.claude/`, `.mcp.json`, `.vscode/`, `.devcontainer/`, and a `CLAUDE.md` or `CLAUDE.local.md` in any folder. Claude Code reads a `CLAUDE.md` as instructions and runs the hooks in `.claude/settings.json` on the computer of whoever starts a session on the branch, so a feature that added one could steer the reviewer or run commands on the owner's machine without anyone running its code.
+
+**The protected-paths check.** Every guide uses this one command (with `<ref>` the branch being checked); its output must be empty:
+
+```
+git diff --name-only origin/main...<ref> -- tools/ package.json .github/ process/README.md "process/*/guide.md" "process/*/template.md" .claude/ .mcp.json .vscode/ .devcontainer/ ":(glob)**/CLAUDE.md" ":(glob)**/CLAUDE.local.md"
+```
+
+Sessions that work on an existing feature branch run it **before checking the branch out**, against `origin/feature/<id>` after `git fetch origin`, because a checkout alone is enough for those files to take effect. If it is not empty, the session stops without checking out, and tells the person running the session and the owner which files it found. The CSP is checked separately (phase 3 guide, Step 1). The `output/` folders and `process/INDEX.md` are **not** protected: they are where a feature's own sessions write, and `tools/check_feature.py` allows a feature to touch only its own id's folders and its own `INDEX.md` line. A feature that needs a protected path to change is an **owner-only change**. The rule is enforced by CODEOWNERS and by `tools/check_feature.py`.
 
 ## 8. What the automation must provide
 
@@ -224,6 +232,8 @@ Two to five sentences: what this feature is and where the process stands.
 2. **Dismiss stale pull request approvals when new commits are pushed.** Without it, the owner's phase 1 approval of a proposal would still count after the code is added, and a member could merge unreviewed code.
 3. **Require review from Code Owners.** The approval must come from the account in `.github/CODEOWNERS`, not from any member with write access.
 4. **Bypass list: add the Repository admin role, mode "For pull requests only".** GitHub does not let anyone approve their own pull request, so without this the owner could not merge their own (decision 12), including deploy and stop records a session opened under the owner's account. "For pull requests only" keeps direct pushes to `main` blocked for the owner too.
+
+Give members the **Write** role, never **Admin**: anyone with the admin role could use the same bypass.
 
 ## 9. Known limits
 
