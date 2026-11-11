@@ -1,9 +1,7 @@
 ---
 feature_id: F-yyyymmdd-short-name
-phase: 2
 status: draft                 # draft | ready | blocked (waiting on the owner or on a fix to the proposal; see the guide)
 created: yyyy-mm-dd
-previous: process/1-propose/output/F-yyyymmdd-short-name/proposal.md
 risk_proposed: "[fill]"       # copied from the proposal: low | medium | high
 risk_floor: "[fill]"          # from the files changed (guide, Step 4): low | medium | high
 ---
@@ -18,11 +16,6 @@ like this one may stay; they are not shown on GitHub.
 
 [fill]
 <!-- Two to five sentences: what this feature is, what was built, and where the process stands. If blocked, say why and what would unblock it. -->
-
-## Branch
-
-[fill]
-<!-- feature/<id>, the pull request number, and the latest commit when this file was set to ready. -->
 
 ## Task list
 

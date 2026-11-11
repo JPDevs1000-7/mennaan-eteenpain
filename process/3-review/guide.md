@@ -27,7 +27,7 @@ Do not write anything until all of these hold. If one fails, stop and tell the p
 - The `test` check on the pull request is green for the latest commit: `gh pr checks <number>`. A red check goes back to phase 2 without a review.
 
 Then go by the state of `process/3-review/output/<id>/review.md`:
-- **No `review.md` yet:** copy `process/3-review/template.md` to `process/3-review/output/<id>/review.md` and fill the header (`feature_id`, `created`, `previous`). This is round 1; go on with Step 1.
+- **No `review.md` yet:** copy `process/3-review/template.md` to `process/3-review/output/<id>/review.md` and fill the header (`feature_id`, `created`). This is round 1; go on with Step 1.
 - **`status: ready`:** the review is waiting for the owner. Go to **The owner's decision**. Do not start a round, and do not commit anything.
 - **`status: blocked`:** read the reason in **Context for the next session**. If it still applies, stop and say so. If nothing has been committed outside this phase's files since the block (for example the owner has only approved the pull request), set `status: draft` and go on with Step 4 of the same round. Otherwise go to **A new round**.
 - **`status: draft`:** go to **A new round**.

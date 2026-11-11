@@ -1,9 +1,7 @@
 ---
 feature_id: F-yyyymmdd-short-name
-phase: 3
 status: draft                 # draft (a review round is open or findings wait for fixes) | ready (waiting for the owner's decision) | blocked (see the guide)
 created: yyyy-mm-dd
-previous: process/2-build/output/F-yyyymmdd-short-name/build.md   # traceability only; the reviewer never reads it
 review_round: 1               # raised by one at the start of every new review round
 risk: "[fill]"                # the higher of the proposal's risk and the risk floor the reviewer works out from the diff: low | medium | high
 open_findings: "[fill]"       # number of must-fix and should-fix findings not yet closed; 0 before status: ready

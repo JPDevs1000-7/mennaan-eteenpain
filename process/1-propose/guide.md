@@ -140,4 +140,4 @@ The phase is done when the gate passes. Until `tools/check_feature.py` exists, t
 - Every hard rule answered, none `violates`.
 - `confirmed_by_proposer: yes`.
 - Header fields match their sections (verdict, risk, schema change).
-- When `owner_decision_required: yes`: the owner's GitHub approval, given after the last change to `proposal.md`. The owner's own pull requests need none.
+- When `owner_decision_required: yes`: the owner's GitHub approval on a commit that already holds the current `proposal.md` (checked by commit, not by date, as in phase 2, Step 0). The owner's own pull requests need none.

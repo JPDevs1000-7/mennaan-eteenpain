@@ -1,9 +1,7 @@
 ---
 feature_id: F-yyyymmdd-short-name
-phase: 4
 status: draft                 # draft | ready (the deploy record is complete) | blocked (waiting on the owner; see the guide)
 created: yyyy-mm-dd
-previous: process/3-review/output/F-yyyymmdd-short-name/review.md
 pull_request: "[fill]"        # the feature pull request, #n
 merge_commit: "[fill]"        # the commit the merge created on main
 approval: "[fill]"            # owner-approved | owner-authored | keep | missing (see the guide, Step 0)

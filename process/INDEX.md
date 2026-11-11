@@ -14,6 +14,7 @@ Features **still in progress** are not listed here. They live only on their own 
 - **One line per feature.** The session that finishes a feature adds its line: in a stop record (phases 1 to 3), or in phase 4's deploy record pull request. A line is final. A feature that was rolled back, rejected or parked is never reopened under its old id; if the need comes back, it is a new feature with its own id and its own line, and its proposal names the old one.
 - **A feature touches only its own line.** It never edits another feature's line or the text above the table (`tools/check_feature.py` checks this).
 - **Newest first:** add new lines at the top of the table.
+- **Conflicts:** if two features finish at about the same time, the second stop record or deploy record pull request conflicts in this file. The session that opened it merges `origin/main` into its branch, keeps the other feature's line as it is, puts its own line back at the top, and pushes. It never edits the other line.
 - **Columns:**
   - **Feature id:** `F-<yyyymmdd>-<short-name>`, the same as the folder and branch names.
   - **Title:** the pull request's short title in plain words.

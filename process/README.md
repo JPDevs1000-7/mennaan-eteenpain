@@ -1,6 +1,6 @@
 # Feature Process: from an idea to a live feature
 
-**Status:** DRAFT v0.9 for owner review. Only the checks that already exist (`tools/run_checks.py`, CI, the protected `main`) are built; everything else here is design.
+**Status:** DRAFT v0.10 for owner review. Only the checks that already exist (`tools/run_checks.py`, CI, the protected `main`) are built; everything else here is design.
 
 ## 1. Purpose and principles
 
@@ -30,6 +30,8 @@ Safety rests on four layers:
 | Reviewer session | A separate fresh Claude session | Review the change against the spec and rules, knowing nothing of how it was built |
 | Gate | Scripts and CI | Decide pass or fail on mechanical checks |
 | Approver | The project owner (for now) | Approve risky specs and the final change by approving the pull request on GitHub; merge it |
+
+**Anyone with access to the repository may start any phase's session**, not only the proposer or the owner (decision 20). The guides call this person "the person running the session". The owner's actions (approving, commenting `stop`, `reject`, `keep` or `revert`, and merging) are the only decisions, and only the owner can take them. The one step the owner must run in person is a phase 4 live check when no browser tool is available.
 
 The approver is named in **one place**, the `CODEOWNERS` file. An approval counts only when it comes from that GitHub account, because text typed into a handoff file can be written by anyone, including an AI session.
 
@@ -137,49 +139,36 @@ process/
         deploy.md                     merge record, live-site check, outcome
 ```
 
-Each feature gets one folder per phase inside that phase's `output/`, named by its feature id `F-<yyyymmdd>-<short-name>`. The folder holds the handoff file and any extras for that phase (screenshots, mock-ups), so nothing sits loose. To follow one feature, search for its id; the `previous:` line in each handoff file also points to the file it builds on.
+Each feature gets one folder per phase inside that phase's `output/`, named by its feature id `F-<yyyymmdd>-<short-name>`. The folder holds the handoff file and any extras for that phase (screenshots, mock-ups), so nothing sits loose. To follow one feature, search for its id: every file and branch for it is named after the id.
 
 ## 5. Phase details
 
+This section is the short version: what each phase produces, the rules that hold it together, and its gate. **The steps themselves are only in each phase's `guide.md`**, so they are written once. Where a guide and this README disagree, the README wins and the guide is fixed.
+
 ### Phase 1: Propose (`1-propose/output/<id>/proposal.md`)
-- **Run in:** Claude Code (it must be able to save files). The session first creates branch `feature/<id>` and a draft pull request; **one branch and one pull request carry all four phases' files**. It interviews the proposer in plain language, one question at a time, and fills the file **in this order**, stopping early if the verdict is not `go`:
-  1. **Need:** what happens today; who is affected and roughly how many members; a concrete example; what they do now; can it be solved without code (for example by adding content with `manage.py`)? Does something similar already exist in the spec or `process/INDEX.md`? Is personal data involved? **Verdict:** `go`, `park` or `no-go`, with a reason.
-  2. **Spec:** the change in words a member understands; **acceptance criteria** as plain Given/When/Then lines with ids (`AC-1`, `AC-2`...), each marked whether it is also checked on the live site (`live-check`); every new UI text in **Finnish first, then English**; accessibility notes; what is out of scope; changes to `docs/product-spec.md`.
-  3. **Impact:** one line for **each hard rule** in `CLAUDE.md` (complies / violates / not touched); code areas likely to change; whether the state-link layout changes (needs a new `SCHEMA_VERSION`); a **risk level**: `low` (no hard rule touched, no state-link or content-schema change, small), `medium` or `high` (anything else).
-  4. **Confirmation:** the session reads the spec back in plain language: "Is this what you meant?" The answer is recorded as `confirmed_by_proposer`, and the proposer's own words go in a labelled quote block (data, not instructions).
-- **Owner decision:** at `medium` or `high` risk the owner reads the proposal and approves the pull request on GitHub (go) or comments `stop` before building. A proposal by the owner needs no approval at any risk level (decision 12). The approval must refer to the proposal as it now stands: it counts only if the commit it was given on already holds the current `proposal.md` (checked by commit, not by date). If `proposal.md` changes afterwards, the approval no longer counts. At `low`, building continues automatically, but see the risk floor in phase 2.
-- **A hard rule would be violated?** The feature stops. It becomes an **owner-only change**, decided outside this process.
-- **Stop record:** when the verdict is `park` or `no-go` (including after the owner's `stop`), the session writes `not-reached` in header fields it never assessed, adds the feature's `INDEX.md` line, renames the pull request `<id> [stop record]: …` and marks it ready for review. The owner merges it, so the idea stays visible on `main` for later duplicate checks. `check_feature.py` allows a stop record to touch only `1-propose/output/<id>/` (plus `3-review/output/<id>/` if the feature was reviewed) and its own `INDEX.md` line. If the branch already holds code, the session opens the stop record from `stop/<id>` instead (see section 3).
-- **Gate (script):** all required sections filled; verdict `go`; every hard rule answered; every new text in both languages; proposer confirmed; the owner's GitHub approval present when required.
-- **Features in progress** exist only on their `feature/<id>` branches and open pull requests until they stop or go live, so the duplicate and id checks also look at open pull requests and remote branches, not only `main`.
-- **Blocked and resumed:** a proposal waiting on the proposer or on something outside the process is set to `blocked` with the reason; a later session resumes on the same branch from the first unfilled section.
-- **Reopened:** when phase 2 or 3 finds the proposal wrong (or the proposer withdraws), a phase 1 session reopens it with the proposer, the proposer confirms again and the owner approves again if required. Then phase 2 resumes, and a review round follows if the feature was in review.
+- Creates branch `feature/<id>` and a draft pull request; **one branch and one pull request carry all four phases**. Interviews the proposer one question at a time, and fills Need, Spec, Impact and Confirmation in that order, stopping early if the verdict is not `go`.
+- Every criterion `AC-n` must be testable; criteria visible on the site are marked `live-check`. Every new text is written in Finnish first, then every other language. Every hard rule gets an answer, and one `violates` stops the feature (it becomes an owner-only change).
+- **Owner decision:** at `medium` or `high` risk the owner approves the pull request or comments `stop` before building; not needed on the owner's own proposals (decision 12). The approval counts only on a commit that already holds the current `proposal.md` (checked by commit, not by date).
+- **Stops** (`park`, `no-go`, the owner's `stop`) become a stop record (decisions 13 and 17). A proposal can be blocked and resumed, and is reopened when a later phase finds it wrong.
+- **Gate:** all sections filled, verdict `go`, every hard rule answered, every text in every language, proposer confirmed, the owner's approval when required.
 
 ### Phase 2: Build (`2-build/output/<id>/build.md` plus the code)
-- **Input:** the proposal only, not the proposer's raw words.
-- **Work:** continue on branch `feature/<id>`; write a short task list; implement; add tests. Each test names its feature and criterion in a comment (for example `// F-20261110-reminder-banner AC-2`), since every feature has its own `AC-1`.
-- **Output:** what changed; which tests cover which criteria; anything that differs from the proposal and why.
-- **Gate:** `python tools/run_checks.py` passes; `tools/check_feature.py` confirms every criterion appears in at least one test and that no protected path changed. It also sets a **risk floor** from the files actually changed (the table is in `2-build/guide.md`; for example `js/codec.js` means `high`, the content schema at least `medium`). The floor can raise the proposal's risk level, never lower it. If the floor is higher than the proposed level and the owner's spec approval is missing, the gate fails.
+- Works from the proposal only, never the proposer's raw words. Writes only an allowlist of paths (the app, `tests/`, `content/`, `manage.py`, the spec changes the proposal lists, its own handoff folder). Each test carries a marker `// <id> AC-n`.
+- Works out the **risk floor** from the changed files (the table is in `2-build/guide.md`). The floor can raise the proposal's risk, never lower it; a raised risk waits for the owner's approval.
+- Anything a member would notice that differs from the proposal blocks the phase and goes back to phase 1.
+- **Gate:** `python tools/run_checks.py` passes; every criterion has a marked test; nothing outside the allowlist changed; the risk floor is filled and, if raised, approved.
 
 ### Phase 3: Review (`3-review/output/<id>/checks.md` and `review.md`)
-- **Rounds:** the phase runs in rounds, each one a fresh reviewer session. A round records the checks, reviews the whole diff and writes findings (`must-fix`, `should-fix` or `note`).
-- **Automated (`checks.md`, written by a script):** all check results; diff summary (files, lines); confirmation that protected paths, other features' files, the CSP and the guardrails are unchanged; one section per round. The test results come from the `test` check in CI, which can be trusted once the protected paths are shown unchanged; the reviewer never runs the branch's unreviewed code on its own computer. Until `check_feature.py` exists, the session pastes the output of fixed commands, never its own summary.
-- **Reviewer session (`review.md`):** reads only the proposal and the code diff and reports findings. It does **not** read `build.md` or any other `output/` file, so it judges the work instead of the builder's account of it; the diff is made with the `output/` folders left out. It works out the risk floor from the diff itself. It never changes code.
-- **Fixes:** a resumed Build session (phase 2) fixes the findings and writes an answer under each one in `review.md`, touching nothing else in that file. The next round reviews the whole new diff and checks each answer against the code; only the reviewer closes a finding. After three rounds with findings still open, the owner is asked how to go on.
-- **Summary for the approver (`review.md`):** what changes for members in plain words; the risk level and why; what the reviewer checked; how to try it; how to roll back.
-- **Owner decision:** when no `must-fix` or `should-fix` finding is open, the session marks the pull request ready for review. The owner approves it on GitHub (`approve`), requests changes (`changes-requested`) or comments `reject` with a reason. The approval must be on the latest commit. Approving does **not** merge anything; it unlocks phase 4. Nothing is committed after the approval, since that would cancel it, so `review.md` only says the decision is pending; phase 4 records the approval in `deploy.md`. Change requests become `O-n` findings for the next Build session and round.
-- **Reject:** the session opens a stop record from a new branch `stop/<id>` holding `proposal.md`, `review.md` and the `INDEX.md` line with outcome `rejected`. The owner closes the feature pull request unmerged and merges the stop record. The code never reaches `main`. `check_feature.py` allows this stop record to touch only `1-propose/output/<id>/`, `3-review/output/<id>/` and its own `INDEX.md` line.
-- **Main moves on:** if the pull request conflicts with `main`, a Build session merges `main` into the branch and a new round reviews the whole diff; an earlier approval no longer counts.
+- Runs in **rounds**, each a fresh reviewer session that reads only the proposal and the code diff, never `build.md` (decision 10). It reports findings and never changes code; a resumed Build session fixes them and answers in `review.md`; only the reviewer closes a finding (decision 14). After three rounds with open findings, the owner is asked.
+- `checks.md` holds command output, not the reviewer's words. The reviewer never runs the branch's code; the `test` check in CI is trusted once no protected path changed.
+- With nothing left open, the reviewer writes a summary for the owner (what changes, risk, how to try it, how to roll back) and marks the pull request ready. The owner approves on the latest commit, requests changes (they become `O-n` findings) or comments `reject` (a stop record, decision 16). Nothing is committed after the approval (decision 15).
+- **Gate:** `review.md` ready with no open findings; the last round in `checks.md` passes on the checked commit; the owner's approval is on the latest commit.
 
 ### Phase 4: Deploy (`4-deploy/output/<id>/deploy.md`)
-- **Input:** `review.md` with status `ready` and the owner's GitHub approval on the latest commit (none needed on the owner's own pull request). A different decision means this phase does not start.
-- **Merge (owner action):** the owner merges the pull request into `main`. `main` is protected, so the `test` check must pass first. An AI session never merges. The phase starts after the merge. Nothing more is committed to `feature/<id>`: the session works on a new branch `deploy/<id>` from `main` and opens the **deploy record** pull request `<id> [deploy record]: …` as a draft. `deploy.md` records the owner's approval (who, on which commit, when) read from GitHub, since `review.md` cannot.
-- **Merged without approval:** until the ruleset requires an approval (section 9), the session checks that the merged commit is the one the owner approved. If not, it stops before the live check, and the owner either comments `keep` on the merged pull request, which then counts as the approval, or has it rolled back (decision 19).
-- **Release (automatic):** `pages.yml` runs on the merge commit, repeats the checks and publishes to GitHub Pages. The session records the pull request number, the merge commit, the result of that workflow run and the commit now live (from GitHub's `github-pages` deployment). A run that failed in a GitHub step may be re-run once by the owner; a run whose checks failed means a rollback.
-- **Live check:** a fresh session first checks whether a browser tool is available. If yes, it opens the live site (its address read from GitHub, no domain hard-coded) and checks that the app loads and that each acceptance criterion marked `live-check` in the proposal behaves as described. If no browser tool is available, the owner runs the session and ticks off a short checklist the session writes. `deploy.md` records who checked (`AI` or `owner`). Anything that cannot be checked from outside is listed as unchecked, with the reason. The check never clears or replaces data saved in the browser and never uses a real email address.
-- **Rollback:** if the deploy run's checks fail or the live check fails, the session prepares a **rollback** pull request `<id> [rollback]: …` from branch `revert/<id>`, which reverts the feature's code but keeps its `process/` files, and the owner merges it through the same protected flow. If the revert conflicts with later changes on `main`, undoing it is an owner-only change. The outcome becomes `rolled-back`, with the reason. A rolled-back feature is finished; if the need remains, it comes back as a **new feature with a new id**, starting in phase 1 (decision 18).
-- **Close-out:** outcome `live` or `rolled-back`. Because `main` is protected, `deploy.md` and the `process/INDEX.md` update go in the deploy record pull request, marked ready after the live check (or after the rollback is live); `check_feature.py` allows it to touch only this feature's `4-deploy/output/<id>/` folder and its own `INDEX.md` line.
-- **Gate (script):** the pull request is merged with a valid approval (`owner-approved`, `owner-authored` or `keep`); the deploy run for the merge commit succeeded (or a rollback is recorded, merged and deployed); the live-check section is filled and says who checked; outcome present.
+- Starts after **the owner merges** the feature pull request; an AI session never merges. Works on branch `deploy/<id>` and opens the **deploy record** pull request as a draft.
+- Records the approval from GitHub, the `pages.yml` run and the commit now live, then checks the live site: by the AI with a browser tool, or by the owner from a checklist (decision 9). It never disturbs data saved in the browser or uses a real email address.
+- A merge without the owner's approval stops the phase until the owner comments `keep` or `revert` (decision 19). A failed deploy or live check leads to a **rollback** pull request that undoes the feature's code but keeps its `process/` files; the owner merges it (decision 18).
+- **Gate:** merged with a valid approval; the deploy run succeeded (or the rollback is merged and live); the live check is recorded with who checked; outcome `live` or `rolled-back`. The deploy record pull request touches only this feature's `4-deploy/output/<id>/` and its `INDEX.md` line.
 
 ## 6. Handoff file format
 
@@ -188,17 +177,15 @@ Every handoff file is Markdown with a header the scripts read:
 ```markdown
 ---
 feature_id: F-20261110-reminder-banner
-phase: 1                      # 1, 2, 3 or 4
 status: ready                 # draft | ready | blocked
 created: 2026-11-10
-previous: none                # or the path of the file this one builds on
 ---
 
 ## Context for the next session
 Two to five sentences: what this feature is and where the process stands.
 ```
 
-- **Phase fields:** each phase's `template.md` may add its own header fields after these five (for example `verdict` and `risk` in `proposal.md`), so the script reads decisions from the header, not from prose.
+- **Phase fields:** each phase's `template.md` may add its own header fields after these three (the phase and the file it builds on follow from the folder) (for example `verdict` and `risk` in `proposal.md`), so the script reads decisions from the header, not from prose.
 - **Self-contained:** a reader with no other context can understand it.
 - **`ready` before moving on:** the next phase refuses to start from a `draft` or `blocked` file.
 - **Revisions are commits;** nothing is silently overwritten.
@@ -208,7 +195,7 @@ Two to five sentences: what this feature is and where the process stands.
 | File | Required sections |
 |---|---|
 | `proposal.md` | Context · Need (problem, who, example, current workaround, without-code option, similar features, personal data, verdict) · Spec (plain-words change, `AC-n` criteria, new texts `fi`/`en`, accessibility, out of scope, product-spec changes) · Impact (hard-rule table, code areas, schema change yes/no, risk level) · `confirmed_by_proposer` · Owner decision (when required) |
-| `build.md` | Context · Branch · Task list · What changed · Criterion-to-test map · Differences from the proposal |
+| `build.md` | Context · Task list · What changed · Criterion-to-test map · Differences from the proposal |
 | `review.md` | Context · Checks (one line per round) · Reviewer findings and answers · Summary for the approver · How to try it · How to roll back · Decision (pending until the owner decides; the reason, in a stop record) |
 | `deploy.md` | Context · Merge record (owner's approval and the commit it was on, pull request, merge commit, time) · Deploy run result (run, live commit) · Live check (checked by `AI` or `owner`, what was checked, what could not be) · Rollback (if any) · Outcome |
 
@@ -226,17 +213,24 @@ Two to five sentences: what this feature is and where the process stands.
 | `.github/CODEOWNERS` | Names the approver; guards the protected paths (enforced once the ruleset requires code-owner review) | **Exists** |
 | `process/<phase>/guide.md`, `template.md` and an empty `output/` | The instructions and the empty handoff file for each phase, and where its handoffs are saved | **Exists** (all four phases) |
 | `process/INDEX.md` | One list of all finished features (live, rolled back or stopped), for duplicate checks | **Exists** (empty until the first feature finishes) |
-| Pull request templates | `.github/pull_request_template.md` for the feature pull request (handoff files, the owner's actions, a gate checklist only the owner ticks); `.github/PULL_REQUEST_TEMPLATE/` for the stop record, rollback and deploy record pull requests. Sessions fill them with `gh pr create --body-file`; the body is never the record, the handoff files are | **Exists** |
+| Pull request templates | `.github/pull_request_template.md` for the feature pull request (handoff files, the owner's actions, a pointer to each guide's gate); `.github/PULL_REQUEST_TEMPLATE/` for the stop record, rollback and deploy record pull requests. Sessions fill them with `gh pr create --body-file`; the body is never the record, the handoff files are | **Exists** |
 | `/feature <phase> <id>` skill | Fresh-session entry for each phase; loads only what that phase may read | To build |
-| Ruleset update on `main` | Require one approval and code-owner review, so members with repo access cannot merge their own pull requests | **Deferred by the owner**; a quick GitHub setting, switch on before members get write access |
+| Ruleset update on `main` | Members with repo access cannot merge a pull request the owner has not approved on its latest commit; the owner can still merge their own | **Deferred by the owner**; switch on before members get write access (settings below) |
 | Preview of a pull request | Lets the owner try it before approving | Interim: run locally. Proper previews arrive with Cloudflare Pages |
+
+**Ruleset settings to switch on** (GitHub: Settings → Rules → Rulesets → the ruleset on `main`). Keep everything already on (pull request required, status check `test` required, no force pushes, no deletion), and add:
+
+1. **Require a pull request before merging → Required approvals: 1.** No one can merge a pull request without an approval.
+2. **Dismiss stale pull request approvals when new commits are pushed.** Without it, the owner's phase 1 approval of a proposal would still count after the code is added, and a member could merge unreviewed code.
+3. **Require review from Code Owners.** The approval must come from the account in `.github/CODEOWNERS`, not from any member with write access.
+4. **Bypass list: add the Repository admin role, mode "For pull requests only".** GitHub does not let anyone approve their own pull request, so without this the owner could not merge their own (decision 12), including deploy and stop records a session opened under the owner's account. "For pull requests only" keeps direct pushes to `main` blocked for the owner too.
 
 ## 9. Known limits
 
 - **Merging is not yet restricted to the owner.** The ruleset on `main` requires a pull request and a passing `test` check but no approval, so anyone with write access could merge their own pull request, for example a feature pull request marked ready after phase 1, before any code exists. The owner accepted this for now and will switch on the ruleset update in section 8 before launch (before members get write access); it closes the gap and takes minutes. Meanwhile phase 4 notices a merge without the owner's approval and stops before the live check, so the owner can keep it or roll it back (decision 19); by then the code may already be live.
 - **The owner's own features need no approval.** GitHub does not let anyone approve their own pull request, and the owner has decided that changes they author themselves may go ahead without one. `tools/check_feature.py` therefore requires the owner's approval only on pull requests opened by someone else. The reviewer session is still the independent check. When a second approver exists, require them for everything.
 - **The checks are mechanical.** They catch rule violations and untested criteria. They cannot judge whether a feature is a good idea or well worded; that is phase 3's human decision.
-- **No per-pull-request preview** on GitHub Pages.
+- **No route for content ideas.** Phase 1 turns down an idea that new weekly content would solve (`no-go`, solvable without code), but no process adds that content yet. Left for later by the owner.
 - **The builder is a fallible AI** that crafted text in a proposal can mislead. That is why the reviewer session and the protected-path check exist.
 
 ## 10. Decisions made by the owner
@@ -260,6 +254,7 @@ Two to five sentences: what this feature is and where the process stands.
 17. **Stopping after code exists:** whenever a feature stops while its branch already holds code (the owner's `stop` on a raised risk, the proposer withdrawing, or a reopened proposal ending in `park` or `no-go`), the stop record is opened from a new branch `stop/<id>` like decision 16, holding only the handoff files and the `INDEX.md` line, and the feature pull request is closed unmerged. Unreviewed code never reaches `main` (2026-11-09).
 18. **After a rollback:** a rolled-back feature is finished, with outcome `rolled-back` in `INDEX.md`. It is never reopened under the same id; if the need remains, it is proposed again as a new feature with a new id, whose proposal names the old one and the reason it was rolled back. The rollback keeps the feature's `process/` files on `main` (2026-11-11).
 19. **Merged without approval:** if phase 4 finds that a feature pull request was merged without the owner's valid approval, it stops before the live check. The owner either comments `keep` on the merged pull request, which then counts as the approval, or has the feature rolled back (2026-11-11).
+20. **Who runs the sessions:** anyone with access to the repository may run any phase's session. The owner's decisions on GitHub, and the final merge, stay with the owner (2026-11-11).
 
 ## 11. Open questions
 

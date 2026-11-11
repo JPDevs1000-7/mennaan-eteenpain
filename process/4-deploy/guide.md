@@ -28,14 +28,14 @@ Find the feature pull request: `gh pr list --state all --head feature/<id> --jso
 **The approval.** The merged pull request counts as approved when one of these holds:
 - `owner-approved`: the owner's newest review has state `APPROVED` and its `commit.oid` equals `headRefOid` (the commit that was merged);
 - `owner-authored`: the owner opened the pull request and merged it (README decision 12);
-- `keep`: the owner has commented `keep` on the merged pull request (see **Merged without approval**).
+- `keep`: the owner's newest `keep` or `revert` comment on the merged pull request is `keep` (see **Merged without approval**).
 
 If none holds, the approval is `missing`: go to Step 1 anyway, so the facts are recorded, and then to **Merged without approval** instead of Step 2.
 
 ## Step 1: The merge record
 
 1. `git fetch origin`, create `deploy/<id>` from `origin/main`, and copy `process/4-deploy/template.md` to `process/4-deploy/output/<id>/deploy.md`.
-2. Fill the header (`feature_id`, `created`, `previous: process/3-review/output/<id>/review.md`, `pull_request`, `merge_commit`, `approval`) and the **Merge record** section from the `gh pr view` output: who approved, the approved commit and when; who merged, the merge commit and when. For `owner-approved` or `keep`, give the review's or the comment's URL.
+2. Fill the header (`feature_id`, `created`, `pull_request`, `merge_commit`, `approval`) and the **Merge record** section from the `gh pr view` output: who approved, the approved commit and when; who merged, the merge commit and when. For `owner-approved` or `keep`, give the review's or the comment's URL.
 3. Commit, push, and open a **draft** pull request titled `<id> [deploy record]: <short title>`, with the body from `.github/PULL_REQUEST_TEMPLATE/deploy-record.md` filled in (in a temporary file outside the repository, passed with `--body-file`); it links the feature pull request. It shows the owner where the feature stands while the phase runs.
 
 ## Step 2: The deploy run
@@ -83,7 +83,7 @@ Fill **Live check** in `deploy.md` and `checked_by` in the header: each item wit
 
 ## Merged without approval
 
-Until the ruleset on `main` requires an approval (README section 9), someone may merge a feature pull request the owner has not approved. The code is then on `main` and probably live. Do not run the live check yet, and do not judge the code. Set `status: blocked`, write in **Context for the next session** what was merged without approval and by whom, push, and tell the person running the session that the owner decides on the feature pull request:
+Until the ruleset on `main` requires an approval (README section 9), someone may merge a feature pull request the owner has not approved. The code is then on `main` and probably live. Do not run the live check yet, and do not judge the code. Set `status: blocked`, write in **Context for the next session** what was merged without approval and by whom, push, and tell the person running the session that the owner decides on the feature pull request. Only comments from the account in `.github/CODEOWNERS` count, and if there are both, the owner's newest `keep` or `revert` comment wins:
 
 - **Keep it:** the owner comments `keep` on the merged pull request. That comment counts as the approval: a later session sets `approval: keep`, adds the comment's URL to **Merge record**, and goes on with Step 2.
 - **Revert it:** the owner comments `revert` on the merged pull request. A later session goes to **Rollback**; the reason is "merged without the owner's approval". Words typed into the session do not count, because the session cannot tell who typed them.

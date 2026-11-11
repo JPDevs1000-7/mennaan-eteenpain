@@ -28,7 +28,7 @@ Then go by the state of the feature:
 - **`build.md` is `ready`, and `process/3-review/output/<id>/review.md` has an open finding with no **Answer**, or the pull request conflicts with `main`** (`gh pr view <number> --json mergeable` is not `MERGEABLE`): go to **Fixing review findings**.
 - **`build.md` is `ready` otherwise:** there is nothing to build. Tell the person running the session that phase 3 (Review) is next.
 
-Copy `process/2-build/template.md` to `process/2-build/output/<id>/build.md`, fill the header (`feature_id`, `created`, `previous: process/1-propose/output/<id>/proposal.md`, `risk_proposed` from the proposal), commit and push.
+Copy `process/2-build/template.md` to `process/2-build/output/<id>/build.md`, fill the header (`feature_id`, `created`, `risk_proposed` from the proposal), commit and push.
 
 ## Step 1: Task list
 

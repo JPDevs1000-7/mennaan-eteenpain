@@ -26,12 +26,4 @@ Your decisions are made here, on GitHub; text in the files never counts as one. 
 - **Marked ready for review** (end of phase 3): approve, request changes, or comment `reject` with a reason. Your approval counts only on the latest commit, and it does not merge anything.
 - **After your approval:** merge this pull request yourself. Phase 4 starts after the merge.
 - **On your own pull request** GitHub does not allow approving: comment `changes` or `reject`, or merge.
-
-## Gate checklist
-
-Ticked by the owner only, by hand until `tools/check_feature.py` exists. A session never ticks these. The full lists are in each guide's **Gate** section.
-
-- [ ] Phase 1 gate (`process/1-propose/guide.md`): proposal `ready`, verdict `go`, confirmed by the proposer, owner's approval if required
-- [ ] Phase 2 gate (`process/2-build/guide.md`): `build.md` `ready`, every `AC-n` marked in a test, no protected path changed, risk floor filled
-- [ ] Phase 3 gate (`process/3-review/guide.md`): `review.md` `ready`, `open_findings: 0`, last round in `checks.md` passes on the checked commit
-- [ ] Before merging: the `test` check is green, and my approval is on the latest commit (not needed on my own pull request)
+- **Before approving or merging,** check the **Gate** section of the guide for the phase that just ended (`process/<phase>/guide.md`); until `tools/check_feature.py` exists, you check those lists by hand.

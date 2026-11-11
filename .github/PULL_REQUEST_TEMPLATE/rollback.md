@@ -11,10 +11,10 @@ revert/<id> after replacing every <id>, <n> and <commit>, and every [fill].
 - **What members will notice:** [fill]
 <!-- From "How to roll back" in process/3-review/output/<id>/review.md, in plain words: for example, links made with a new state-link version stop opening. -->
 
-This pull request changes exactly the feature's files outside `process/`, back to how they were before the merge. The feature's handoff files stay on `main`. The deploy record pull request for `<id>` records the outcome `rolled-back` after this one is live.
+This pull request undoes exactly the changes the feature made outside `process/`, and nothing else. Later changes by other features to the same files stay as they are, so a file is not necessarily back to how it was before the merge. The feature's handoff files stay on `main`. The deploy record pull request for `<id>` records the outcome `rolled-back` after this one is live.
 
 ## For the owner
 
-- [ ] **Files changed** matches the feature's changes outside `process/`: `git diff --name-only <commit>^1 <commit> -- . ":(exclude)process/"`.
+- [ ] **Files changed** lists the same files as the feature's changes outside `process/` (`git diff --name-only <commit>^1 <commit> -- . ":(exclude)process/"`), and each change is the feature's change reversed.
 - [ ] The `test` check is green.
 - [ ] Then merge this pull request. A later phase 4 session checks that the rollback is live.

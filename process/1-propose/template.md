@@ -1,9 +1,7 @@
 ---
 feature_id: F-yyyymmdd-short-name
-phase: 1
 status: draft                 # draft | ready | blocked (waiting on the proposer or on something outside the process; see the guide)
 created: yyyy-mm-dd
-previous: none
 proposer: "@github-handle"
 verdict: "[fill]"             # go | park | no-go
 risk: "[fill]"                # low | medium | high | not-reached (only when stopped before Step 3)
