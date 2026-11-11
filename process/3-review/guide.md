@@ -8,7 +8,7 @@ The phase runs in **rounds**. Each round is one fresh reviewer session: it recor
 
 - **Run in Claude Code**, in a fresh session. The session must be able to save files, run `python` and `node`, and use `git` and `gh`.
 - **Check out** the existing branch `feature/<id>` and pull it. Never start a new branch, except `stop/<id>` in **Reject**.
-- **Read only:** this guide, `process/3-review/template.md`, `process/README.md`, `CLAUDE.md`, `docs/product-spec.md`, `process/1-propose/output/<id>/proposal.md`, the code diff (Step 2), any code or test file in the repository you need for context, and this feature's `process/3-review/output/<id>/` files from earlier rounds.
+- **Read only:** this guide, `process/3-review/template.md`, `process/README.md`, `CLAUDE.md`, `docs/product-spec.md`, `process/1-propose/output/<id>/proposal.md`, the code diff (Step 2), any code or test file in the repository you need for context, this feature's `process/3-review/output/<id>/` files from earlier rounds, and `.github/PULL_REQUEST_TEMPLATE/stop-record.md` in **Reject**.
 - **Never read** `build.md` (apart from its `status:` and `risk_floor:` lines, in Steps 0 and 3), any other file in `process/*/output/`, or the pull request's description and comments (apart from the owner's review in **The owner's decision**). They hold the builder's account of the work; you judge the work itself (README decision 10).
 - **Write only** inside `process/3-review/output/<id>/`. Never change code, tests, content, the spec or `proposal.md`, even to fix a typo: you report, a Build session fixes. The one exception is the stop record in **Reject**.
 
@@ -125,7 +125,7 @@ A rejected feature leaves a **stop record** on `main`, like a phase 1 stop (READ
 
 1. Write the owner's reason in **Decision** and **Context for the next session** of `review.md`, set `status: ready`, commit and push on `feature/<id>`.
 2. Create branch `stop/<id>` from an up-to-date `main`. Copy in, unchanged, `process/1-propose/output/<id>/proposal.md` and `process/3-review/output/<id>/review.md` from `feature/<id>` (`git checkout origin/feature/<id> -- <path>` for each), and add the feature's line to `process/INDEX.md` with phase `3` and outcome `rejected`.
-3. Check that `stop/<id>` changes nothing else: `git diff --name-only origin/main...HEAD`. Commit, push, and open a pull request titled `<id> [stop record]: <short title>`, ready for review, that links the original pull request.
+3. Check that `stop/<id>` changes nothing else: `git diff --name-only origin/main...HEAD`. Commit, push, and open a pull request titled `<id> [stop record]: <short title>`, ready for review, with the body from `.github/PULL_REQUEST_TEMPLATE/stop-record.md` filled in (in a temporary file outside the repository, passed with `--body-file`); it links the original pull request.
 4. Tell the person running the session that the owner closes the original pull request unmerged and merges the stop record. You never close or merge either.
 
 ## Blocked

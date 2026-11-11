@@ -226,7 +226,7 @@ Two to five sentences: what this feature is and where the process stands.
 | `.github/CODEOWNERS` | Names the approver; guards the protected paths (enforced once the ruleset requires code-owner review) | **Exists** |
 | `process/<phase>/guide.md`, `template.md` and an empty `output/` | The instructions and the empty handoff file for each phase, and where its handoffs are saved | **Exists** (all four phases) |
 | `process/INDEX.md` | One list of all finished features (live, rolled back or stopped), for duplicate checks | **Exists** (empty until the first feature finishes) |
-| Pull request template | Links the handoff files and the checklist | To build |
+| Pull request templates | `.github/pull_request_template.md` for the feature pull request (handoff files, the owner's actions, a gate checklist only the owner ticks); `.github/PULL_REQUEST_TEMPLATE/` for the stop record, rollback and deploy record pull requests. Sessions fill them with `gh pr create --body-file`; the body is never the record, the handoff files are | **Exists** |
 | `/feature <phase> <id>` skill | Fresh-session entry for each phase; loads only what that phase may read | To build |
 | Ruleset update on `main` | Require one approval and code-owner review, so members with repo access cannot merge their own pull requests | **Deferred by the owner**; a quick GitHub setting, switch on before members get write access |
 | Preview of a pull request | Lets the owner try it before approving | Interim: run locally. Proper previews arrive with Cloudflare Pages |
