@@ -53,7 +53,7 @@ Fill section 1 of the template, in order. Push for a concrete example; a feature
 
 Before deciding, check:
 - **Without code:** could new weekly content (`manage.py`), a wording change or simply using an existing feature solve it?
-- **Duplicates:** search `docs/product-spec.md` and `process/INDEX.md`, and list the open feature pull requests (`gh pr list --state open --search "head:feature/"`), because features in progress are not on `main` yet. If a similar feature exists or is in progress, say which.
+- **Duplicates:** search `docs/product-spec.md` and `process/INDEX.md`, and list the open feature pull requests (`gh pr list --state open --search "head:feature/"`), because features in progress are not on `main` yet. If a similar feature exists or is in progress, say which. A feature that was `rolled-back`, `rejected` or parked can be proposed again, but only as this new feature: name it under **Similar features**, give the reason it stopped (from its `deploy.md`, `review.md` or `proposal.md`), and say what is different this time.
 - **Personal data:** anything about a person (names, email, dates, answers). This does not stop a feature, but it decides how rule 2 is answered later.
 
 Then set the **verdict** in the section and in the header:

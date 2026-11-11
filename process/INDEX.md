@@ -11,7 +11,7 @@ Features **still in progress** are not listed here. They live only on their own 
 
 ## Rules for this file
 
-- **One line per feature.** The session that finishes a feature adds its line: in a stop record (phases 1 to 3), or in phase 4's follow-up pull request. If a later outcome changes it (for example `rolled-back` and then, after a fix, `live`), that feature's own session updates the same line. It never adds a second one.
+- **One line per feature.** The session that finishes a feature adds its line: in a stop record (phases 1 to 3), or in phase 4's deploy record pull request. A line is final. A feature that was rolled back, rejected or parked is never reopened under its old id; if the need comes back, it is a new feature with its own id and its own line, and its proposal names the old one.
 - **A feature touches only its own line.** It never edits another feature's line or the text above the table (`tools/check_feature.py` checks this).
 - **Newest first:** add new lines at the top of the table.
 - **Columns:**
@@ -21,7 +21,7 @@ Features **still in progress** are not listed here. They live only on their own 
   - **Phase:** the last phase the feature reached (`1` to `4`).
   - **Outcome:** exactly one of `live`, `rolled-back`, `park` (a real need, but not now), `no-go` (not needed, already exists, or solvable without code) or `rejected` (built and reviewed, but the owner turned it down).
   - **Date:** when the outcome was reached, `yyyy-mm-dd`.
-  - **Pull requests:** the feature pull request, plus the stop record or the follow-up, as `#n` links.
+  - **Pull requests:** the feature pull request, plus the stop record, or the rollback (if any) and the deploy record, as `#n` links.
 
 ## Features
 
