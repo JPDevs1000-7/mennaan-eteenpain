@@ -217,7 +217,7 @@ Sessions that work on an existing feature branch run it **before checking the br
 |---|---|---|
 | `tools/run_checks.py`, CI, guardrails | Mechanical safety net | **Exists** |
 | Protected `main` ruleset | No direct pushes; `test` must pass | **Exists** |
-| `tools/check_feature.py` | Validates handoff files and status flow, criterion-to-test coverage, protected paths, the risk floor, the approver's GitHub approvals (read with `gh`), the phase 4 deploy record (merged with a valid approval, deploy run succeeded) and the rollback pull request (it undoes exactly the feature's changes outside `process/`); builds the reviewer's diff; writes `checks.md` | To build |
+| `tools/check_feature.py` | Validates handoff files and status flow, criterion-to-test coverage, protected paths, the risk floor, the approver's GitHub approvals (read with `gh`), the phase 4 deploy record (merged with a valid approval, deploy run succeeded) and the rollback pull request (it undoes exactly the feature's changes outside `process/`); builds the reviewer's diff; writes `checks.md`. Reads everything through git and `gh`, so a branch is checked without checking it out: `gate <1-4, stop, rollback> <id>`, `review <id>`, `diff <id>` | **Exists** |
 | `.github/CODEOWNERS` | Names the approver; guards the protected paths (enforced once the ruleset requires code-owner review) | **Exists** |
 | `process/<phase>/guide.md`, `template.md` and an empty `output/` | The instructions and the empty handoff file for each phase, and where its handoffs are saved | **Exists** (all four phases) |
 | `process/INDEX.md` | One list of all finished features (live, rolled back or stopped), for duplicate checks | **Exists** (empty until the first feature finishes) |

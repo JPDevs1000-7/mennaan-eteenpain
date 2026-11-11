@@ -34,19 +34,26 @@ Then go by the state of `process/3-review/output/<id>/review.md`:
 
 ## Step 1: Checks (`checks.md`)
 
-`checks.md` is the mechanical record of the review, one section per round, added below the earlier ones; earlier rounds are never edited. Once `tools/check_feature.py` exists, run `python tools/check_feature.py review <id>`; it adds the section. Until then, write it by hand **only from command output**, pasted unedited, never summarised in your own words.
+`checks.md` is the mechanical record of the review, one section per round, added below the earlier ones; earlier rounds are never edited. Raise `review_round` in `review.md` first (Step 0 or **A new round**), commit, then run:
 
-**Do not run the branch's code on your computer** (no `run_checks.py`, `npm test` or `manage.py` from the branch): its tests and scripts were written in this feature and you have not reviewed them yet. The `test` check in CI runs exactly `tools/run_checks.py` on GitHub's machines, and its result can be trusted once item 2 shows that no protected path changed, because the workflow and the check scripts are protected paths.
+```
+python tools/check_feature.py review <id>
+```
 
-1. A heading `Round <n>`, then `commit: <hash>`, `date:` and `written_by: manual`. The commit is the **checked commit**: the latest one that changes anything other than this phase's own files, `git log -1 --format=%H -- . ":(exclude)process/3-review/output/<id>/**"`. The review's own commits come after it and change nothing that the checks look at.
-2. The protected paths changed, which must be empty: the protected-paths check in README section 7, with `HEAD` as `<ref>`.
-3. Files outside what a feature may change, which must be empty. This is the phase 2 allowlist (**Write only** in its guide); `INDEX.md` changes only in a stop record or in phase 4's deploy record: `git diff --name-only origin/main...HEAD -- . ":(exclude)index.html" ":(exclude)migrate.html" ":(exclude)css/**" ":(exclude)js/**" ":(exclude)manage.py" ":(exclude)tests/**" ":(exclude)content/**" ":(exclude)docs/product-spec.md" ":(exclude)process/*/output/<id>/**"`.
-4. The CSP lines on `main` and on the branch: `git grep -i -h content-security-policy origin/main -- index.html migrate.html`, then the same with `HEAD` in place of `origin/main`. They must be identical.
-5. The `test` check result for the checked commit: `gh pr checks <number>`, or `gh run list --commit <hash> --workflow CI`.
-6. The changed files and lines: `git diff --stat origin/main...HEAD`.
-7. The criterion markers: `git grep -n "<id> AC-" -- tests/`.
+It adds the round's section to `process/3-review/output/<id>/checks.md` and prints it. Never write or edit that section yourself. The script reads everything through git, and it is a protected path, so the copy on the branch is the one on `main` once the check before checkout came back empty.
 
-Add one line to the **Checks** section of `review.md`: round, checked commit, date, pass or fail. Fail means any of: a protected path or a file outside the allowlist (including another feature's files) changed, the CSP changed, the `test` check is not green, or a criterion in the proposal has no marker. A fail is a `must-fix` finding; keep reviewing so the Build session gets everything in one go. If item 2 is not empty, do not trust item 5.
+**Do not run the branch's code on your computer** (no `run_checks.py`, `npm test` or `manage.py` from the branch): its tests and scripts were written in this feature and you have not reviewed them yet. The `test` check in CI runs exactly `tools/run_checks.py` on GitHub's machines, and its result can be trusted once the section shows that no protected path changed, because the workflow and the check scripts are protected paths.
+
+The section records:
+1. `Round <n>`, the **checked commit** (the latest one that changes anything other than this phase's own files; the review's own commits come after it and change nothing the checks look at), the date and `result: pass` or `fail`.
+2. The protected paths changed (README section 7), which must be empty.
+3. Files outside the phase 2 allowlist (**Write only** in its guide), including another feature's files and `INDEX.md`, which must be empty.
+4. The Content-Security-Policy on `main` and on the branch, which must be identical.
+5. The `test` check result for the checked commit, which must be `success`.
+6. The changed files and lines.
+7. The criterion markers, and any criterion in the proposal without one.
+
+Add one line to the **Checks** section of `review.md`: round, checked commit, date, and the section's result. A `fail` is a `must-fix` finding, one for each failing item; keep reviewing so the Build session gets everything in one go. If item 2 is not empty, do not trust item 5.
 
 Commit `checks.md` and `review.md`.
 
@@ -55,8 +62,10 @@ Commit `checks.md` and `review.md`.
 Make the diff with the `output/` folders left out, so the builder's account does not reach you:
 
 ```
-git diff origin/main...HEAD -- . ":(exclude)process/*/output/**"
+python tools/check_feature.py diff <id> --ref HEAD
 ```
+
+It is the same as `git diff origin/main...HEAD -- . ":(exclude)process/*/output/**"`.
 
 Read all of it. Then open the full files around the changes where you need context.
 
@@ -140,7 +149,7 @@ Other features may reach `main` while this one is in review. The ruleset does no
 
 ## Gate
 
-The phase is done when the gate passes. Until `tools/check_feature.py` exists, the owner checks the same list by hand:
+The phase is done when the gate passes: `python tools/check_feature.py gate 3 <id>` checks this list, and gates 1 and 2 again. Anyone can run it; it reads the branch from GitHub without checking it out.
 
 - `review.md` has `status: ready`, no `[fill]` left, and `open_findings: 0`, with every `must-fix` and `should-fix` row `closed`.
 - The last round in `checks.md` is for the checked commit (the latest one outside `process/3-review/output/<id>/`) and passes: `test` green, no protected path or file outside the allowlist changed, CSP unchanged, every criterion marked in a test.

@@ -52,7 +52,7 @@ Write the task list in `build.md` before writing code: small steps, each naming 
 
 ## Step 4: Risk floor
 
-The files you changed set a minimum risk level. Until `tools/check_feature.py` exists, work it out by hand with `git diff --name-only origin/main...HEAD`, using this table (the script will use the same one):
+The files you changed set a minimum risk level. Work it out with `git diff --name-only origin/main...HEAD` and this table. After pushing, `python tools/check_feature.py gate 2 <id>` works it out the same way and says if `risk_floor` differs:
 
 | What changed | Risk floor |
 |---|---|
@@ -97,7 +97,7 @@ A review round (phase 3) can end with findings to fix, written by the reviewer o
 
 ## Gate
 
-The phase is done when the gate passes. Until `tools/check_feature.py` exists, the owner checks the same list by hand:
+The phase is done when the gate passes: `python tools/check_feature.py gate 2 <id>` checks this list, and gate 1 again. Anyone can run it; it reads the branch from GitHub without checking it out.
 
 - `build.md` has `status: ready` and no `[fill]` left.
 - `python tools/run_checks.py` passes on the latest commit (the `test` check on the pull request is green).

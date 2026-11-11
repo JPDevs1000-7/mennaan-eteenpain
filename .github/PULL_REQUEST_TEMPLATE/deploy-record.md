@@ -16,6 +16,5 @@ This pull request holds only `deploy.md` (and any screenshots beside it) and the
 
 ## For the owner
 
-- [ ] The phase 4 gate in `process/4-deploy/guide.md` holds: merged with a valid approval, deploy run succeeded (or the rollback is merged and live), live check filled, outcome present.
-- [ ] **Files changed** lists only this feature's `process/4-deploy/output/<id>/` and one new `INDEX.md` line.
+- [ ] `python tools/check_feature.py gate 4 <id>` passes: merged with a valid approval, deploy run succeeded (or the rollback is merged and live), live check filled, outcome present, and only this feature's folder and `INDEX.md` line changed.
 - [ ] Then merge this pull request. The feature is finished.

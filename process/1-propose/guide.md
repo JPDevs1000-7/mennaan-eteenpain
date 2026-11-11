@@ -132,7 +132,7 @@ If the branch already holds anything beyond phase 1's files (a feature stopped a
 
 ## Gate
 
-The phase is done when the gate passes. Until `tools/check_feature.py` exists, the owner checks the same list by hand:
+The phase is done when the gate passes: `python tools/check_feature.py gate 1 <id>` checks this list. Anyone can run it; it reads the branch from GitHub without checking it out.
 
 - `status: ready`, and no `[fill]` left anywhere in the file. (`not-reached` is allowed only in a stop record.)
 - `verdict: go`.

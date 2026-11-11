@@ -107,7 +107,7 @@ If an earlier session ended before `deploy.md` was `ready`, do not start over. C
 
 ## Gate
 
-The phase is done when the gate passes. Until `tools/check_feature.py` exists, the owner checks the same list by hand before merging the deploy record pull request:
+The phase is done when the gate passes: `python tools/check_feature.py gate 4 <id>` checks this list on `deploy/<id>`, and the owner runs it before merging the deploy record pull request. A rollback pull request is checked with `gate rollback <id>` before the owner merges it, and a stop record with `gate stop <id>`.
 
 - The feature pull request is merged, and `approval` is `owner-approved`, `owner-authored` or `keep`, with the review, the merge or the comment to prove it on GitHub.
 - The `pages.yml` run for the merge commit (or a later run that contains it) succeeded, or a rollback is recorded.

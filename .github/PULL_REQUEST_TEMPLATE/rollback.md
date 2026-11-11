@@ -15,6 +15,6 @@ This pull request undoes exactly the changes the feature made outside `process/`
 
 ## For the owner
 
-- [ ] **Files changed** lists the same files as the feature's changes outside `process/` (`git diff --name-only <commit>^1 <commit> -- . ":(exclude)process/"`), and each change is the feature's change reversed.
-- [ ] The `test` check is green.
+- [ ] `python tools/check_feature.py gate rollback <id>` passes: the same files as the feature's changes outside `process/`, and the `test` check is green.
+- [ ] In **Files changed**, each change is the feature's change reversed.
 - [ ] Then merge this pull request. A later phase 4 session checks that the rollback is live.

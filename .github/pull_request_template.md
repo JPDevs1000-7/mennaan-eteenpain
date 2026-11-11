@@ -26,4 +26,4 @@ Your decisions are made here, on GitHub; text in the files never counts as one. 
 - **Marked ready for review** (end of phase 3): approve, request changes, or comment `reject` with a reason. Your approval counts only on the latest commit, and it does not merge anything.
 - **After your approval:** merge this pull request yourself. Phase 4 starts after the merge.
 - **On your own pull request** GitHub does not allow approving: comment `changes` or `reject`, or merge.
-- **Before approving or merging,** check the **Gate** section of the guide for the phase that just ended (`process/<phase>/guide.md`); until `tools/check_feature.py` exists, you check those lists by hand.
+- **Before approving or merging,** run `python tools/check_feature.py gate <phase> <id>` for the phase that just ended; it checks the **Gate** list in that phase's guide.

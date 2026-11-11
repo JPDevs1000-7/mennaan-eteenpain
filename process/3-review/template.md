@@ -11,8 +11,8 @@ open_findings: "[fill]"       # number of must-fix and should-fix findings not y
 Copy this file to process/3-review/output/<feature_id>/review.md and fill it,
 following process/3-review/guide.md. Replace every [fill]. HTML comments like
 this one may stay; they are not shown on GitHub. checks.md, next to this file,
-is written by tools/check_feature.py (by hand from command output until the
-script exists), never composed by the reviewer.
+is written by `python tools/check_feature.py review <id>`, never composed by
+the reviewer.
 -->
 
 ## Context for the next session

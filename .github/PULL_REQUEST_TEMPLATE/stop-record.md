@@ -19,6 +19,6 @@ This pull request holds only the feature's handoff files and its line in `proces
 
 ## For the owner
 
-- [ ] **Files changed** lists only the files above, and the `INDEX.md` change is this feature's one line.
+- [ ] `python tools/check_feature.py gate stop <id>` passes (it checks the files, the `INDEX.md` line and the title).
 - [ ] The feature pull request is closed unmerged (if it is a different pull request from this one), so its code never reaches `main`.
 - [ ] Then merge this pull request.

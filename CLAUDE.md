@@ -18,7 +18,7 @@ Product source of truth: `docs/product-spec.md`. Read it before changing behavio
 - `content/` — weekly prompt JSON plus `manifest.json` (rebuilt by `manage.py`).
 - `manage.py` — admin CLI. `migrate.html` + `js/migrate.js` — old-domain redirect (UC-4).
 - `tests/` — `npm test` (Node) and `python -I -m unittest discover -s tests -p "test_*.py"`; both are run by `tools/run_checks.py`.
-- `tools/check_guardrails.py` — static security/architecture checks, including the CSP. `tools/run_checks.py` — runs every check in one command.
+- `tools/check_guardrails.py` — static security/architecture checks, including the CSP. `tools/run_checks.py` — runs every check in one command. `tools/check_feature.py` — the feature process gates (`process/README.md`), run per feature, not in CI.
 - `.github/workflows/` — `ci.yml` (PRs and main), `pages.yml` (deploy on main after tests pass).
 
 ## Before you finish any change
