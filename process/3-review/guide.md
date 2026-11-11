@@ -40,7 +40,7 @@ Then go by the state of `process/3-review/output/<id>/review.md`:
 python tools/check_feature.py review <id>
 ```
 
-It adds the round's section to `process/3-review/output/<id>/checks.md` and prints it. Never write or edit that section yourself. The script reads everything through git, and it is a protected path, so the copy on the branch is the one on `main` once the check before checkout came back empty.
+It adds the round's section to `process/3-review/output/<id>/checks.md` and prints it. Never write or edit that section yourself. If the `test` check has no finished result yet, it writes nothing and says so: push the branch, wait for the check to finish (`gh pr checks <number> --watch`), and run it again. The script reads everything through git, and it is a protected path, so the copy on the branch is the one on `main` once the check before checkout came back empty.
 
 **Do not run the branch's code on your computer** (no `run_checks.py`, `npm test` or `manage.py` from the branch): its tests and scripts were written in this feature and you have not reviewed them yet. The `test` check in CI runs exactly `tools/run_checks.py` on GitHub's machines, and its result can be trusted once the section shows that no protected path changed, because the workflow and the check scripts are protected paths.
 
@@ -49,7 +49,7 @@ The section records:
 2. The protected paths changed (README section 7), which must be empty.
 3. Files outside the phase 2 allowlist (**Write only** in its guide), including another feature's files and `INDEX.md`, which must be empty.
 4. The Content-Security-Policy on `main` and on the branch, which must be identical.
-5. The `test` check result for the checked commit, which must be `success`.
+5. The `test` check result for the checked commit, which must be `success`. CI runs only on the newest commit of each push, so when the checked commit has no result of its own, the result of a later commit is used (it says which); those commits change only this phase's files.
 6. The changed files and lines.
 7. The criterion markers, and any criterion in the proposal without one.
 
@@ -65,7 +65,7 @@ Make the diff with the `output/` folders left out, so the builder's account does
 python tools/check_feature.py diff <id> --ref HEAD
 ```
 
-It is the same as `git diff origin/main...HEAD -- . ":(exclude)process/*/output/**"`.
+It is the same as `git diff --text origin/main...HEAD -- . ":(exclude)process/*/output/**"`. The `--text` shows every change, even in a file marked as binary.
 
 Read all of it. Then open the full files around the changes where you need context.
 
@@ -79,7 +79,7 @@ Check each of these and write one finding per problem. Name the file and line.
 - **Texts.** The keys and texts in `js/i18n.js` and `content/` match the proposal's **New texts** table exactly, in every language.
 - **Product spec.** `docs/product-spec.md` has exactly the changes the proposal lists, and nothing else.
 - **Existing tests.** No existing test was weakened, skipped or deleted. If one changed, the reason must follow from the confirmed spec; otherwise `must-fix`.
-- **Risk floor.** Work out the floor from the changed files yourself, with the table in `process/2-build/guide.md` (Step 4). Do not copy it from `build.md`. Set `risk` in the header to the higher of the proposal's risk and your floor. If your floor is higher than the proposal's risk, the proposer is not the owner and the owner did not approve the proposal, a Build session cannot fix that: finish the round, then set `status: blocked` (see **Blocked**) until the owner has approved the pull request. If your floor differs from `risk_floor` in `build.md` (the one header line you may check, with `git grep -h -m1 "^risk_floor:"`), add a `note` saying so.
+- **Risk floor.** Work out the floor from the changed files yourself, with the table in `process/2-build/guide.md` (Step 4). Do not copy it from `build.md`. Set `risk` in the header to the higher of the proposal's risk and your floor. If your floor is higher than the proposal's risk, the owner's account did not open the pull request and the owner did not approve the proposal, a Build session cannot fix that: finish the round, then set `status: blocked` (see **Blocked**) until the owner has approved the pull request. If your floor differs from `risk_floor` in `build.md` (the one header line you may check, with `git grep -h -m1 "^risk_floor:"`), add a `note` saying so.
 - **Quality.** Bugs, edge cases (midnight, the first day, an empty or broken link, a missing translation), code that is hard to follow, and code in `app.js` that belongs in a pure module.
 
 Severity:
@@ -153,5 +153,5 @@ The phase is done when the gate passes: `python tools/check_feature.py gate 3 <i
 
 - `review.md` has `status: ready`, no `[fill]` left, and `open_findings: 0`, with every `must-fix` and `should-fix` row `closed`.
 - The last round in `checks.md` is for the checked commit (the latest one outside `process/3-review/output/<id>/`) and passes: `test` green, no protected path or file outside the allowlist changed, CSP unchanged, every criterion marked in a test.
-- `risk` is filled. If it is higher than the proposal's risk, the owner's approval of the proposal is present (not needed when the proposer is the owner).
+- `risk` is filled. If it is higher than the proposal's risk, the owner's approval of the proposal is present (not needed when the owner's account opened the pull request).
 - The owner's newest review is an approval on the latest commit (`commit.oid` equals `headRefOid`); not needed when the owner opened the pull request.

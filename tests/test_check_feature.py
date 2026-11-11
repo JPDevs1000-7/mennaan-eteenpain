@@ -120,7 +120,10 @@ class Paths(unittest.TestCase):
     def test_protected(self):
         for p in ("CLAUDE.md", "tests/CLAUDE.md", "js/deep/CLAUDE.local.md", ".claude/settings.json", ".mcp.json",
                   ".vscode/tasks.json", ".devcontainer/devcontainer.json", "tools/x.py", "package.json",
-                  ".github/workflows/ci.yml", "process/README.md", "process/2-build/guide.md", "process/4-deploy/template.md"):
+                  ".github/workflows/ci.yml", "process/README.md", "process/2-build/guide.md", "process/4-deploy/template.md",
+                  # any case: on Windows and macOS these land on the real files when checked out
+                  "tests/claude.md", "js/Claude.Local.md", "Tools/check_feature.py", ".GitHub/workflows/ci.yml",
+                  "Package.json", "Process/2-build/Guide.md", ".Claude/settings.json", "js/.claude/skills/x/SKILL.md"):
             self.assertTrue(cf.is_protected(p), p)
         for p in ("js/app.js", "tests/x.test.js", "process/INDEX.md", f"process/1-propose/output/{FID}/proposal.md",
                   "docs/product-spec.md", "claude.md.txt"):
@@ -154,11 +157,11 @@ class RiskFloor(unittest.TestCase):
 
 
 class Proposal(unittest.TestCase):
-    def problems(self, text, owner=OWNER):
-        return cf.check_proposal(text, ["fi", "en"], owner)[0]
+    def problems(self, text, owner_opened=False):
+        return cf.check_proposal(text, ["fi", "en"], owner_opened)[0]
 
     def test_good_proposal(self):
-        problems, ids = cf.check_proposal(proposal(), ["fi", "en"], OWNER)
+        problems, ids = cf.check_proposal(proposal(), ["fi", "en"])
         self.assertEqual(problems, [])
         self.assertEqual(ids, ["AC-1", "AC-2"])
 
@@ -184,8 +187,10 @@ class Proposal(unittest.TestCase):
 
     def test_owner_decision_rules(self):
         self.assertEqual(self.problems(proposal(risk="high", owner_decision_required="yes")), [])
-        self.assertEqual(self.problems(proposal(risk="high", proposer='"@owner"')), [])
+        self.assertEqual(self.problems(proposal(risk="high"), owner_opened=True), [])
         self.assertTrue(self.problems(proposal(risk="low", owner_decision_required="yes")))
+        # The proposer: line is typed text; writing the owner there changes nothing.
+        self.assertTrue(self.problems(proposal(risk="high", proposer=f'"@{OWNER}"')))
 
     def test_new_texts_none(self):
         text = proposal().replace("| banner.title | Muistutus | Reminder |", "| none | | |")
@@ -230,9 +235,9 @@ class OtherFiles(unittest.TestCase):
 
 
 class Approvals(unittest.TestCase):
-    def pr(self, author="member", head="h2", reviews=(), comments=(), merged_by=None):
+    def pr(self, author="member", head="h2", reviews=(), comments=(), merged_by=None, merged_at="t1"):
         return {"author": {"login": author}, "headRefOid": head, "reviews": list(reviews), "comments": list(comments),
-                "mergedBy": {"login": merged_by} if merged_by else None}
+                "mergedBy": {"login": merged_by} if merged_by else None, "mergedAt": merged_at}
 
     def rev(self, state, oid, when, who=OWNER):
         return {"author": {"login": who}, "state": state, "commit": {"oid": oid}, "submittedAt": when}
@@ -251,6 +256,10 @@ class Approvals(unittest.TestCase):
         stopped = self.pr(reviews=[self.rev("APPROVED", "h1", "2026-11-10T10:00:00Z")],
                           comments=[self.com("Stop: not now", "2026-11-10T11:00:00Z")])
         self.assertFalse(cf.proposal_approval(stopped, OWNER, holds)[0])
+        # "Dismiss stale approvals" turns the approval into DISMISSED once phase 2 pushes code.
+        dismissed = self.pr(reviews=[self.rev("DISMISSED", "h1", "2026-11-10T10:00:00Z")])
+        self.assertTrue(cf.proposal_approval(dismissed, OWNER, holds)[0])
+        self.assertFalse(cf.proposal_approval(self.pr(reviews=[self.rev("DISMISSED", "h0", "t")]), OWNER, holds)[0])
 
     def test_final_approval(self):
         self.assertTrue(cf.final_approval(self.pr(reviews=[self.rev("APPROVED", "h2", "t2")]), OWNER)[0])
@@ -265,10 +274,13 @@ class Approvals(unittest.TestCase):
         self.assertEqual(cf.deploy_approval(self.pr(reviews=[self.rev("APPROVED", "h2", "t2")]), OWNER), "owner-approved")
         self.assertEqual(cf.deploy_approval(self.pr(author=OWNER, merged_by=OWNER), OWNER), "owner-authored")
         self.assertEqual(cf.deploy_approval(self.pr(), OWNER), "missing")
-        kept = self.pr(comments=[self.com("revert", "t1"), self.com("keep it", "t2")])
+        kept = self.pr(comments=[self.com("revert", "t2"), self.com("keep it", "t3")])
         self.assertEqual(cf.deploy_approval(kept, OWNER), "keep")
-        reverted = self.pr(comments=[self.com("keep", "t1"), self.com("revert please", "t2")])
+        reverted = self.pr(comments=[self.com("keep", "t2"), self.com("revert please", "t3")])
         self.assertEqual(cf.deploy_approval(reverted, OWNER), "missing")
+        # A comment from before the merge (t1) that starts with "keep" is not a decision on the merge.
+        early = self.pr(comments=[self.com("Keep the text short, please", "t0")])
+        self.assertEqual(cf.deploy_approval(early, OWNER), "missing")
 
 
 class KeptInStep(unittest.TestCase):
@@ -276,11 +288,12 @@ class KeptInStep(unittest.TestCase):
 
     def test_protected_paths_match_the_readme_command(self):
         readme = (ROOT / "process" / "README.md").read_text(encoding="utf-8")
-        command = re.search(r"git diff --name-only origin/main\.\.\.<ref> -- (.+)", readme)
+        command = re.search(r"git --icase-pathspecs diff --name-only origin/main\.\.\.<ref> -- (.+)", readme)
         self.assertIsNotNone(command, "protected-paths command not found in process/README.md")
         specs = {s.strip('"') for s in command.group(1).split()}
         expected = (set(cf.PROTECTED_DIRS) | set(cf.PROTECTED_FILES)
-                    | {f":(glob)**/{n}" for n in cf.PROTECTED_NAMES} | {"process/*/guide.md", "process/*/template.md"})
+                    | {f":(glob)**/{n}" for n in cf.PROTECTED_NAMES} | {f":(glob)**/{n}/**" for n in cf.PROTECTED_DIR_NAMES}
+                    | {"process/*/guide.md", "process/*/template.md"})
         self.assertEqual(specs, expected)
 
     def test_claude_md_has_the_counted_hard_rules(self):
@@ -297,7 +310,7 @@ class KeptInStep(unittest.TestCase):
         self.assertIn("live check", cf.sections((ROOT / "process/4-deploy/template.md").read_text(encoding="utf-8")))
 
     def test_empty_templates_fail(self):
-        for name, check in (("1-propose", lambda t: cf.check_proposal(t, ["fi", "en"], OWNER)[0]),
+        for name, check in (("1-propose", lambda t: cf.check_proposal(t, ["fi", "en"])[0]),
                             ("2-build", lambda t: cf.check_build(t)[0]), ("3-review", lambda t: cf.check_review(t)[0]),
                             ("4-deploy", lambda t: cf.check_deploy(t)[0])):
             text = (ROOT / "process" / name / "template.md").read_text(encoding="utf-8").replace("\r\n", "\n")
@@ -321,7 +334,7 @@ class Gates(unittest.TestCase):
 
     class FakeGitHub:
         def __init__(self):
-            self.prs, self.conclusion, self.runs = {}, "success", []
+            self.prs, self.conclusion, self.runs, self.checks = {}, "success", [], {}
 
         def pr_for_branch(self, branch):
             return self.prs.get(branch)
@@ -330,7 +343,7 @@ class Gates(unittest.TestCase):
             return next(p for p in self.prs.values() if p["number"] == number)
 
         def check(self, sha, name="test"):
-            return self.conclusion
+            return self.checks.get(sha, self.conclusion)
 
         def pages_runs(self):
             return self.runs
@@ -395,6 +408,84 @@ class Gates(unittest.TestCase):
     def assertFailsWith(self, report, words):
         failed = [text for ok, text in report.items if not ok]
         self.assertTrue(any(words in text for text in failed), report.render())
+
+    def test_gate_1_needs_the_owner_unless_the_owner_opened_the_pull_request(self):
+        # A member's pull request with the owner typed in as proposer still needs the owner's approval.
+        self.write(cf.paths_for(FID)["proposal"], proposal(risk="high", proposer=f'"@{OWNER}"', owner_decision_required="no"))
+        sha = self.commit("proposal")
+        self.push()
+        self.assertFailsWith(self.gate("1"), "owner_decision_required")
+        self.assertFailsWith(self.gate("1"), "no owner approval")
+        self.write(cf.paths_for(FID)["proposal"], proposal(risk="high", owner_decision_required="yes"))
+        sha = self.commit("proposal fixed")
+        self.push()
+        pr = self.gh.prs[f"feature/{FID}"]
+        pr["reviews"] = [{"author": {"login": OWNER}, "state": "DISMISSED", "commit": {"oid": sha}, "submittedAt": "t1"}]
+        self.assertPasses(self.gate("1"))
+        # The owner's own pull request needs none.
+        pr["author"], pr["reviews"] = {"login": OWNER}, []
+        self.write(cf.paths_for(FID)["proposal"], proposal(risk="high", owner_decision_required="no"))
+        self.commit("owner's own")
+        self.push()
+        self.assertPasses(self.gate("1"))
+
+    def test_changes_requested_withdraws_a_proposal_approval_only_before_building(self):
+        self.write(cf.paths_for(FID)["proposal"], proposal(risk="medium", owner_decision_required="yes"))
+        approved = self.commit("proposal")
+        self.push()
+        rev = lambda state, oid, when: {"author": {"login": OWNER}, "state": state, "commit": {"oid": oid}, "submittedAt": when}  # noqa: E731
+        pr = self.gh.prs[f"feature/{FID}"]
+        pr["reviews"] = [rev("APPROVED", approved, "t1"), rev("CHANGES_REQUESTED", approved, "t2")]
+        self.assertFailsWith(self.gate("1"), "requested changes to the proposal")
+        # A change request on the built code is phase 3's business, not a withdrawal of the proposal approval.
+        self.write(cf.paths_for(FID)["build"], build(risk_proposed="medium", risk_floor="low"))
+        built = self.commit("build")
+        self.push()
+        pr["reviews"] = [rev("APPROVED", approved, "t1"), rev("CHANGES_REQUESTED", built, "t2")]
+        self.assertPasses(self.gate("1"))
+
+    def test_gitattributes_cannot_hide_a_change(self):
+        self.build_feature()
+        self.write("js/.gitattributes", "app.js -diff\n")
+        self.write("js/app.js", "const a = 1;\nlocalStorage.setItem('x', '1');\n")
+        self.commit("hide it")
+        self.push()
+        self.assertFailsWith(self.gate("2"), "js/.gitattributes")
+        git = cf.Git(self.root)  # the branch is checked out, so its .gitattributes is in force
+        self.assertIn("localStorage", cf.reviewer_diff(git, "HEAD"))
+        lines = {"js/app.js": git.changed_lines("origin/main", "HEAD", "js/app.js")}
+        self.assertEqual(cf.risk_floor(git.changes("origin/main", "HEAD"), lines, ["encodeState"])[0], "high")
+
+    def test_review_round_waits_for_a_finished_test_check(self):
+        built = self.build_feature()
+        self.write(cf.paths_for(FID)["review"], review(status="draft"))
+        head = self.commit("review round 1")
+        ctx = cf.Context(FID, "HEAD", cf.Git(self.root), self.gh)
+        self.gh.conclusion = None  # CI ran on neither commit yet
+        with self.assertRaises(cf.CheckError):
+            cf.write_review_round(ctx, root=self.root)
+        self.gh.checks[head] = "in_progress"
+        with self.assertRaises(cf.CheckError):
+            cf.write_review_round(ctx, root=self.root)
+        self.assertFalse((self.root / cf.paths_for(FID)["checks"]).exists())
+        # CI ran only on the newest commit of the push; it tested the same code as the checked one.
+        self.gh.checks[head] = "success"
+        section = cf.write_review_round(ctx, root=self.root)
+        self.assertIn(f"commit: {built}", section)
+        self.assertIn(f"success (on {head}", section)
+        self.assertIn("result: pass", section)
+
+    def test_readme_protected_paths_command_ignores_case(self):
+        readme = (ROOT / "process" / "README.md").read_text(encoding="utf-8")
+        command = re.search(r"git (--icase-pathspecs diff --name-only origin/main\.\.\.)<ref>( -- .+)", readme)
+        for path in ("Tools/check_feature.py", "tests/claude.md", "js/.Claude/settings.json", "Process/2-build/Guide.md"):
+            self.write(path, "x\n")
+        self.write("js/app.js", "const b = 2;\n")
+        self.commit("planted")
+        args = (command.group(1) + "HEAD" + command.group(2)).split()
+        # Lower-cased: on a case-insensitive disk Process/ is written into the existing process/ folder.
+        found = {p.lower() for p in self.git(*[a.strip('"') for a in args]).split()}
+        self.assertEqual(found, {"tools/check_feature.py", "tests/claude.md", "js/.claude/settings.json", "process/2-build/guide.md"})
 
     def test_gate_2_passes_for_a_good_feature(self):
         self.build_feature()

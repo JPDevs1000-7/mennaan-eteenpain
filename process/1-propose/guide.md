@@ -84,7 +84,7 @@ If the verdict is not `go`, write `[not reached]` in sections 2 to 5, set `risk`
   - `medium`: anything that is not low.
   - `high`: touches personal data, the state link, the CSP or security-related code, or changes how existing user data is read.
   - When unsure, choose the higher level. Phase 2's script can raise the level from the files actually changed, never lower it.
-- Set `owner_decision_required: yes` for `medium` and `high`, `no` for `low`. Exception: if the proposer is the owner (the account named in `.github/CODEOWNERS`), set `no` at any risk level. The owner's own pull requests need no approval (README decision 12).
+- Set `owner_decision_required: yes` for `medium` and `high`, `no` for `low`. Exception: if the feature pull request was opened by the owner's account (the account named in `.github/CODEOWNERS`; check with `gh pr view <number> --json author`), set `no` at any risk level. The owner's own pull requests need no approval (README decision 12). What counts is who opened the pull request on GitHub, not the `proposer:` line, so an owner's idea in a pull request a member opened still needs the owner's approval.
 
 ## Step 4: Confirmation
 
@@ -95,7 +95,7 @@ Read the spec back to the proposer in their language and in plain words: what ch
 
 ## Step 5: Owner decision and finishing
 
-1. Fill section 5: `Not required (risk low)`, `Not required (proposed by the owner)` or `Required (risk medium/high)`.
+1. Fill section 5: `Not required (risk low)`, `Not required (pull request opened by the owner)` or `Required (risk medium/high)`.
 2. Replace every remaining `[fill]`, set `status: ready`, commit and push.
 3. Tell the proposer what happens next, in plain words:
    - **Not required:** phase 2 (Build) can start in a new session.
@@ -105,7 +105,7 @@ You never record an approval yourself; the gate reads it from GitHub.
 
 ## The owner's answer
 
-When `owner_decision_required: yes`, a later session checks out `feature/<id>` and reads the owner's answer on the pull request (only the account in `.github/CODEOWNERS` counts; their newest review or `stop` comment wins):
+When `owner_decision_required: yes`, a later session checks out `feature/<id>` and reads the owner's answer on the pull request (only the account in `.github/CODEOWNERS` counts; their newest review or `stop` comment wins; for the proposal, only reviews from before building started count, because a later "request changes" is about the code and phase 3 handles it):
 
 - **Approved:** nothing to do in this phase; phase 2 can start.
 - **`stop` comment:** the owner does not want the feature built (this can also come while phase 2 waits for the owner's approval of a raised risk). Set the verdict (header and section 1) to `no-go`, or to `park` if the owner says "not now". Write the owner's reason in section 5 and in **Context for the next session**, then follow **Stopping**. The idea stays on `main` as a stop record for later duplicate checks.

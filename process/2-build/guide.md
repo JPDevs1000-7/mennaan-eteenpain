@@ -8,7 +8,7 @@ How a Claude session runs the second phase. The phase turns a confirmed proposal
 - **Before checking out,** run `git fetch origin` and the protected-paths check in README section 7 against `origin/feature/<id>`. If it lists anything, stop without checking out and say which files it found. Then **check out** the existing branch `feature/<id>` and pull it. Never start a new branch: one branch and one pull request carry all four phases.
 - **Read only:** this guide, `process/2-build/template.md`, `process/README.md`, `CLAUDE.md`, `docs/product-spec.md`, `process/1-propose/output/<id>/proposal.md`, and the code and tests you need; when fixing review findings, also the findings table in `process/3-review/output/<id>/review.md`. Do not read other features' `output/` folders, and do not rely on memory of earlier sessions.
 - **Write only:** the app (`index.html` and `migrate.html` outside their CSP, `css/`, `js/`), `manage.py`, `tests/`, `content/`, `docs/product-spec.md` (only the changes the proposal lists), and `process/2-build/output/<id>/`. When fixing review findings, also the **Answer** column of the findings table in `process/3-review/output/<id>/review.md`, and nothing else in that file. Anything else, for example `package.json`, is out of bounds. A new page is also out of bounds: it only goes live if `.github/workflows/pages.yml` changes, which is protected, so it is an owner-only change.
-- **Never write:** `proposal.md` (any change to it cancels the owner's approval; see **When the proposal is wrong**), any protected path in README section 7 (`CLAUDE.md` or `CLAUDE.local.md` in any folder, the rules in `process/`, `tools/`, `package.json`, `.github/`, `.claude/`, `.mcp.json`, `.vscode/`, `.devcontainer/`, the CSP), or another feature's files.
+- **Never write:** `proposal.md` (any change to it cancels the owner's approval; see **When the proposal is wrong**), any protected path in README section 7 (`CLAUDE.md`, `CLAUDE.local.md`, `.gitattributes` or a `.claude/` folder anywhere, the rules in `process/`, `tools/`, `package.json`, `.github/`, `.mcp.json`, `.vscode/`, `.devcontainer/`, the CSP, in any upper or lower case), or another feature's files.
 
 ## The proposal is your only input
 
@@ -19,7 +19,7 @@ Build what the proposal says, not what you think the proposer meant. Section 4 o
 Do not write anything until all of these hold. If one fails, stop and tell the person running the session which one, in plain words.
 
 - `proposal.md` has `status: ready`, `verdict: go` and `confirmed_by_proposer: yes`.
-- If `owner_decision_required: yes`: the owner (the account in `.github/CODEOWNERS`) has approved the pull request on a commit that already holds the current `proposal.md`. Take the `commit.oid` of each of the owner's `APPROVED` reviews from `gh pr view <number> --json reviews`; for at least one, `git diff --quiet <oid> HEAD -- process/1-propose/output/<id>/proposal.md` must succeed (no difference). Commit dates are not used, because they come from the committer's computer.
+- If `owner_decision_required: yes`: the owner (the account in `.github/CODEOWNERS`) has approved the pull request on a commit that already holds the current `proposal.md`. Take the `commit.oid` of each of the owner's `APPROVED` or `DISMISSED` reviews from `gh pr view <number> --json reviews` (GitHub dismisses the approval as stale once code is pushed; it still counts while the proposal it approved is unchanged); for at least one, `git diff --quiet <oid> HEAD -- process/1-propose/output/<id>/proposal.md` must succeed (no difference). Commit dates are not used, because they come from the committer's computer. A newer `CHANGES_REQUESTED` review from the owner withdraws that approval: the proposal goes back to phase 1 (phase 1 guide, **The owner's answer**).
 - If the owner has commented `stop`, this phase does not start: a phase 1 session turns the feature into a stop record (phase 1 guide, **The owner's answer**).
 
 Then go by the state of the feature:
@@ -62,7 +62,7 @@ The files you changed set a minimum risk level. Work it out with `git diff --nam
 | an existing test changed or deleted (adding new tests is fine) | `medium` |
 | anything else allowed in **Write only**: `js/app.js` and `js/i18n.js` otherwise, `css/`, `index.html` outside its CSP, new weekly content and the `content/manifest.json` that `manage.py` rebuilds, new tests, `docs/product-spec.md` | `low` |
 
-Set `risk_floor` in the header to the highest level hit. If it is higher than `risk_proposed`, and the owner has not already approved the proposal (`owner_decision_required: no`), and the proposer is not the owner: set `status: blocked`, write the reason in **Context for the next session**, push, and tell the person running the session that the owner must approve the pull request before the feature can continue. The floor can only raise the risk, never lower it.
+Set `risk_floor` in the header to the highest level hit. If it is higher than `risk_proposed`, and the owner has not already approved the proposal (`risk_proposed` is `low`), and the owner's account did not open the pull request: set `status: blocked`, write the reason in **Context for the next session**, push, and tell the person running the session that the owner must approve the pull request before the feature can continue. The floor can only raise the risk, never lower it.
 
 ## Step 5: Finishing
 
@@ -104,4 +104,4 @@ The phase is done when the gate passes: `python tools/check_feature.py gate 2 <i
 - Every `AC-n` in the proposal appears in at least one test, marked with this feature's id.
 - The protected-paths check in README section 7 is empty, and nothing outside **Write only** changed apart from phase 1's files (and phase 3's, after a review round).
 - `proposal.md` is unchanged since phase 1 ended (since the owner's approval, if one was required).
-- `risk_floor` is filled. If it is higher than the proposal's risk, the owner's approval is present (not needed when the proposer is the owner).
+- `risk_floor` is filled. If it is higher than the proposal's risk, the owner's approval is present (not needed when the owner's account opened the pull request).

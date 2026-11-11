@@ -35,10 +35,14 @@ FILL = "[fill]"
 NOT_REACHED = "[not reached]"
 
 # The protected paths of README section 7. A test keeps them in step with the README's command.
-PROTECTED_DIRS = ("tools/", ".github/", ".claude/", ".vscode/", ".devcontainer/")
+# Matched without regard to case, like the README's `git --icase-pathspecs`: on Windows and macOS a
+# branch's `Tools/x.py` is written into `tools/`, and `claude.md` opens as `CLAUDE.md`.
+PROTECTED_DIRS = ("tools/", ".github/", ".vscode/", ".devcontainer/")
 PROTECTED_FILES = ("package.json", "process/README.md", ".mcp.json")
-PROTECTED_NAMES = ("CLAUDE.md", "CLAUDE.local.md")  # in any folder
-PROTECTED_RULES = re.compile(r"process/.+/(?:guide|template)\.md")  # git's "process/*/guide.md" also crosses "/"
+# In any folder. A .gitattributes can mark a file as binary, so `git diff` hides its changes from the reviewer.
+PROTECTED_NAMES = ("CLAUDE.md", "CLAUDE.local.md", ".gitattributes")
+PROTECTED_DIR_NAMES = (".claude",)  # in any folder
+PROTECTED_RULES = re.compile(r"process/.+/(?:guide|template)\.md", re.I)  # git's "process/*/guide.md" also crosses "/"
 
 # What a feature branch may change (phase 2 guide, "Write only"), besides its own output folders.
 FEATURE_FILES = ("index.html", "migrate.html", "manage.py", "docs/product-spec.md")
@@ -87,8 +91,11 @@ def own_folders(fid, phases=PHASE_DIRS):
 
 
 def is_protected(path):
-    return (path in PROTECTED_FILES or path.startswith(PROTECTED_DIRS)
-            or path.rsplit("/", 1)[-1] in PROTECTED_NAMES or bool(PROTECTED_RULES.fullmatch(path)))
+    low = path.lower()
+    parts = low.split("/")
+    return (low in [f.lower() for f in PROTECTED_FILES] or low.startswith(tuple(d.lower() for d in PROTECTED_DIRS))
+            or parts[-1] in [n.lower() for n in PROTECTED_NAMES]
+            or any(p in PROTECTED_DIR_NAMES for p in parts[:-1]) or bool(PROTECTED_RULES.fullmatch(path)))
 
 
 def outside_feature_allowlist(paths, fid):
@@ -214,8 +221,11 @@ def risk_floor(changes, changed_lines, codec_names):
     return level, high + medium
 
 
-def check_proposal(text, langs, owner, stop=False):
-    """Problems with proposal.md for gate 1 (or for a stop record), and its criterion ids."""
+def check_proposal(text, langs, owner_opened=False, stop=False):
+    """Problems with proposal.md for gate 1 (or for a stop record), and its criterion ids.
+
+    owner_opened: the feature pull request was opened by the owner's account, as GitHub says. Never taken
+    from the file's `proposer:` line, which anyone can type."""
     h = parse_header(text)
     if h is None:
         return ["proposal.md: no header"], []
@@ -234,8 +244,7 @@ def check_proposal(text, langs, owner, stop=False):
     need(p, h, "schema_change", ("yes", "no"), f)
     if h.get("schema_change") == "yes" and h.get("risk") == "low":
         p.append(f"{f}: schema_change yes needs risk medium or high")
-    proposer = h.get("proposer", "").lstrip("@").lower()
-    expected = "no" if proposer and proposer == owner else ("yes" if h.get("risk") in ("medium", "high") else "no")
+    expected = "yes" if h.get("risk") in ("medium", "high") and not owner_opened else "no"
     if h.get("owner_decision_required") != expected:
         p.append(f"{f}: owner_decision_required is {h.get('owner_decision_required')!r}, expected {expected!r}")
     sec = sections(text)
@@ -402,13 +411,22 @@ def review_oid(review):
     return (review.get("commit") or {}).get("oid", "")
 
 
-def proposal_approval(pr, owner, holds_current_proposal):
-    """The owner approved a commit that already holds the current proposal.md, and did not say stop since."""
-    approvals = [r for r in owner_reviews(pr, owner)
-                 if r.get("state") == "APPROVED" and holds_current_proposal(review_oid(r))]
+def proposal_approval(pr, owner, holds_current_proposal, before_build=lambda oid: True):
+    """The owner approved a commit that already holds the current proposal.md, and did not say stop since.
+
+    A DISMISSED review counts too: with "dismiss stale approvals" on (README section 8), GitHub dismisses the
+    phase 1 approval as soon as phase 2 pushes code. The approved commit must still hold the current proposal.
+    A later "request changes" withdraws it, but only one made before building started (on a commit without
+    build.md): later ones are about the code, and phase 3 handles them."""
+    reviews = owner_reviews(pr, owner)
+    approvals = [r for r in reviews
+                 if r.get("state") in ("APPROVED", "DISMISSED") and holds_current_proposal(review_oid(r))]
     if not approvals:
         return False, "no owner approval on a commit that holds the current proposal.md"
     when = approvals[-1].get("submittedAt") or ""
+    if any((r.get("submittedAt") or "") > when and r.get("state") == "CHANGES_REQUESTED" and before_build(review_oid(r))
+           for r in reviews):
+        return False, "the owner requested changes to the proposal after approving it"
     if any((c.get("createdAt") or "") > when for c in owner_comments(pr, owner, ("stop",))):
         return False, "the owner commented stop after approving"
     return True, "the owner approved the current proposal"
@@ -435,7 +453,9 @@ def deploy_approval(pr, owner):
         return "owner-approved"
     if login(pr) == owner and ((pr.get("mergedBy") or {}).get("login", "").lower() == owner):
         return "owner-authored"
-    decisions = owner_comments(pr, owner, ("keep", "revert"))
+    # Only comments after the merge decide on it; a "Keep the text short" during review is not a keep.
+    merged = pr.get("mergedAt") or ""
+    decisions = [c for c in owner_comments(pr, owner, ("keep", "revert")) if merged and (c.get("createdAt") or "") > merged]
     if decisions and first_word(decisions[-1].get("body")) == "keep":
         return "keep"
     return "missing"
@@ -475,7 +495,8 @@ class Git:
         return [tuple(line.split("\t", 1)) for line in out.splitlines() if "\t" in line]
 
     def diff(self, *args):
-        return self.out("diff", *args).replace("\r\n", "\n")
+        # --text: show every change even where a .gitattributes marks the file as binary or "-diff".
+        return self.out("diff", "--text", "--no-textconv", "--no-ext-diff", *args).replace("\r\n", "\n")
 
     def changed_lines(self, base, ref, path):
         text = self.diff("-U0", f"{base}...{ref}", "--", path)
@@ -492,6 +513,10 @@ class Git:
 
     def last_commit_outside(self, ref, folder):
         return self.out("log", "-1", "--format=%H", ref, "--", ".", f":(exclude){folder}**").strip()
+
+    def commits_after(self, base, ref):
+        """The commits in base..ref, newest first."""
+        return self.out("rev-list", f"{base}..{ref}").split()
 
 
 PR_FIELDS = "number,title,author,state,isDraft,headRefOid,mergedAt,mergedBy,mergeCommit,reviews,comments"
@@ -597,6 +622,11 @@ class Context:
     def text(self, key, ref=None):
         return self.git.show(ref or self.ref, self.paths[key])
 
+    def proposal_approval(self):
+        return proposal_approval(self.pr, self.owner,
+                                 lambda oid: self.git.same(oid, self.ref, self.paths["proposal"]),
+                                 lambda oid: self.git.show(oid, self.paths["build"]) is None)
+
 
 def csp_lines(git, ref):
     return {page: CSP_RE.findall(git.show(ref, page) or "") for page in ("index.html", "migrate.html")}
@@ -606,16 +636,18 @@ def gate_1(ctx, r):
     text = ctx.text("proposal")
     if not r.check(text is not None, f"{ctx.paths['proposal']} exists"):
         return None
-    problems, ids = check_proposal(text, ctx.langs, ctx.owner)
+    pr = ctx.pr
+    owner_opened = pr is not None and login(pr) == ctx.owner
+    problems, ids = check_proposal(text, ctx.langs, owner_opened)
     r.problems(problems, "proposal.md is complete: ready, go, confirmed, criteria, texts and hard rules filled")
     h = parse_header(text) or {}
-    pr = ctx.pr
     if not r.check(pr is not None, f"feature pull request for feature/{ctx.fid} found"):
         return ids
-    if h.get("owner_decision_required") == "yes" and login(pr) != ctx.owner:
-        r.check(*(proposal_approval(pr, ctx.owner, lambda oid: ctx.git.same(oid, ctx.ref, ctx.paths["proposal"]))))
+    # Whether an approval is needed follows from the risk and from GitHub, never from the file's own claims.
+    if h.get("risk") in ("medium", "high") and not owner_opened:
+        r.check(*ctx.proposal_approval())
     else:
-        r.check(True, "the owner's approval of the proposal is not required")
+        r.check(True, "the owner's approval of the proposal is not required (risk low, or the owner opened the pull request)")
     return ids
 
 
@@ -650,8 +682,8 @@ def gate_2(ctx, r):
     proposal = parse_header(ctx.text("proposal") or "") or {}
     raised = floor in LEVELS and proposal.get("risk") in LEVELS and LEVELS.index(floor) > LEVELS.index(proposal["risk"])
     pr = ctx.pr
-    if raised and proposal.get("owner_decision_required") != "yes" and pr and login(pr) != ctx.owner:
-        ok, why = proposal_approval(pr, ctx.owner, lambda oid: ctx.git.same(oid, ctx.ref, ctx.paths["proposal"]))
+    if raised and proposal.get("risk") not in ("medium", "high") and pr and login(pr) != ctx.owner:
+        ok, why = ctx.proposal_approval()
         r.check(ok, f"risk raised to {floor}: {why}")
     conclusion = ctx.gh.check(ctx.git.sha(ctx.ref))
     r.check(conclusion == "success", f"the test check on the latest commit is {conclusion or 'missing'}")
@@ -748,7 +780,7 @@ def gate_stop(ctx, r):
     text = ctx.text("proposal")
     if not r.check(text is not None, f"{ctx.paths['proposal']} exists"):
         return
-    problems, _ = check_proposal(text, ctx.langs, ctx.owner, stop=True)
+    problems, _ = check_proposal(text, ctx.langs, stop=True)
     r.problems(problems, "proposal.md is ready with nothing left to fill")
     verdict = (parse_header(text) or {}).get("verdict")
     review = ctx.text("review")
@@ -806,6 +838,26 @@ def reviewer_diff(git, ref, main=MAIN):
     return git.diff(f"{main}...{ref}", "--", ".", ":(exclude)process/*/output/**")
 
 
+PENDING = ("queued", "in_progress", "waiting", "requested", "pending")
+
+
+def test_result(ctx, checked):
+    """The `test` check result for the checked commit: (conclusion, commit it was read from).
+
+    CI only runs on the newest commit of each push, so the checked commit may have no result of its own. Every
+    commit after it changes only this phase's own files (that is what makes it the checked commit), so the newest
+    of them with a result tested the same code. A missing or unfinished result writes nothing: a round's section
+    can never be redone, so it must not record a fail that only means "CI has not run yet"."""
+    for sha in [checked] + ctx.git.commits_after(checked, ctx.ref):
+        conclusion = ctx.gh.check(sha)
+        if conclusion in PENDING:
+            raise CheckError(f"the test check on {sha[:9]} is still {conclusion}; wait for it to finish, then run this again")
+        if conclusion:
+            return conclusion, sha
+    raise CheckError(f"no test check result for {checked[:9]} or any later commit; push the branch, wait for the "
+                     "test check to finish, then run this again")
+
+
 def review_round(ctx, today=None):
     """The checks.md section for this round; ctx.ref is the checked-out feature branch (HEAD)."""
     review = parse_header(ctx.text("review") or "") or {}
@@ -817,8 +869,8 @@ def review_round(ctx, today=None):
     protected = [p for p in paths if is_protected(p)]
     outside = [p for p in outside_feature_allowlist(paths, ctx.fid) if p not in protected]
     csp_main, csp_branch = csp_lines(ctx.git, ctx.main), csp_lines(ctx.git, ctx.ref)
-    conclusion = ctx.gh.check(checked)
-    _, ids = check_proposal(ctx.text("proposal") or "", ctx.langs, ctx.owner)
+    conclusion, source = test_result(ctx, checked)
+    _, ids = check_proposal(ctx.text("proposal") or "", ctx.langs)
     found = markers({p: ctx.git.show(ctx.ref, p) or "" for p in ctx.git.files(ctx.ref, "tests/")}, ctx.fid)
     missing = [i for i in ids if i not in found]
     passed = not protected and not outside and csp_main == csp_branch and conclusion == "success" and not missing
@@ -838,7 +890,8 @@ def review_round(ctx, today=None):
         "### Protected paths changed (must be empty)", block(protected), "",
         "### Files outside the feature allowlist (must be empty)", block(outside), "",
         "### Content-Security-Policy (must be identical)", block(csp) + ("" if csp_main == csp_branch else "\nCHANGED"), "",
-        "### The test check on the checked commit", block([conclusion or "missing"]), "",
+        "### The test check on the checked commit", block([conclusion if source == checked else
+                                                           f"{conclusion} (on {source}, which only changes this phase's files)"]), "",
         "### Changed files and lines", block(ctx.git.diff("--stat", f"{ctx.main}...{ctx.ref}").rstrip().splitlines()), "",
         "### Criterion markers", block(marker_lines), "",
     ])
@@ -897,4 +950,9 @@ def main(argv=None, git=None, gh=None):
 
 
 if __name__ == "__main__":
+    # Diffs and handoff files hold Finnish text and other non-ASCII characters. Before Python 3.15, Windows
+    # writes piped output in the ANSI code page and stops with UnicodeEncodeError; always write UTF-8.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     sys.exit(main())

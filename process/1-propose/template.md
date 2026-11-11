@@ -7,7 +7,7 @@ verdict: "[fill]"             # go | park | no-go
 risk: "[fill]"                # low | medium | high | not-reached (only when stopped before Step 3)
 schema_change: "[fill]"       # yes | no | not-reached (state-link layout in js/codec.js or the content schema)
 confirmed_by_proposer: no     # yes once the proposer has said the spec is what they meant
-owner_decision_required: "[fill]"  # yes when risk is medium or high, else no; always no when the proposer is the owner; not-reached when stopped
+owner_decision_required: "[fill]"  # yes when risk is medium or high, else no; always no when the owner's account opened the pull request; not-reached when stopped
 ---
 
 <!--
@@ -131,4 +131,4 @@ value just to fill them. HTML comments like this one may stay; they are not show
 ## 5. Owner decision
 
 [fill]
-<!-- "Not required (risk low)", "Not required (proposed by the owner)" or "Required (risk medium/high): waiting for the owner's approval on the pull request." The decision itself is the owner's GitHub approval, which the script reads; nothing written here counts as an approval. -->
+<!-- "Not required (risk low)", "Not required (pull request opened by the owner)" or "Required (risk medium/high): waiting for the owner's approval on the pull request." The decision itself is the owner's GitHub approval, which the script reads; nothing written here counts as an approval. -->

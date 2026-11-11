@@ -1,6 +1,6 @@
 # Feature Process: from an idea to a live feature
 
-**Status:** DRAFT v0.10 for owner review. Only the checks that already exist (`tools/run_checks.py`, CI, the protected `main`) are built; everything else here is design.
+**Status:** DRAFT v0.11 for owner review. Built: `tools/run_checks.py`, CI, the protected `main`, `tools/check_feature.py`, the phase guides and templates, and the pull request templates. Still to build: the `/feature` skill and the ruleset update (section 8).
 
 ## 1. Purpose and principles
 
@@ -148,7 +148,7 @@ This section is the short version: what each phase produces, the rules that hold
 ### Phase 1: Propose (`1-propose/output/<id>/proposal.md`)
 - First tells the proposer that the repository is public: their handle and quoted words can be read by anyone, so nothing private goes in. Then creates branch `feature/<id>` and a draft pull request; **one branch and one pull request carry all four phases**. Interviews the proposer one question at a time, and fills Need, Spec, Impact and Confirmation in that order, stopping early if the verdict is not `go`.
 - Every criterion `AC-n` must be testable; criteria visible on the site are marked `live-check`. Every new text is written in Finnish first, then every other language. Every hard rule gets an answer, and one `violates` stops the feature (it becomes an owner-only change).
-- **Owner decision:** at `medium` or `high` risk the owner approves the pull request or comments `stop` before building; not needed on the owner's own proposals (decision 12). The approval counts only on a commit that already holds the current `proposal.md` (checked by commit, not by date).
+- **Owner decision:** at `medium` or `high` risk the owner approves the pull request or comments `stop` before building; not needed when the owner's account opened the pull request (decision 12; GitHub's record of who opened it counts, never the `proposer:` line in the file). The approval counts only on a commit that already holds the current `proposal.md` (checked by commit, not by date).
 - **Stops** (`park`, `no-go`, the owner's `stop`) become a stop record (decisions 13 and 17). A proposal can be blocked and resumed, and is reopened when a later phase finds it wrong.
 - **Gate:** all sections filled, verdict `go`, every hard rule answered, every text in every language, proposer confirmed, the owner's approval when required.
 
@@ -201,12 +201,12 @@ Two to five sentences: what this feature is and where the process stands.
 
 ## 7. Protected paths (a feature may never change these)
 
-`CLAUDE.md`, the rules in `process/` (`README.md` and every phase's `guide.md` and `template.md`), `tools/check_guardrails.py`, `tools/run_checks.py`, `tools/check_feature.py`, `package.json` (it holds the command that runs the JavaScript tests), `.github/` (workflows and CODEOWNERS), the Content-Security-Policy meta tag in the HTML files, and **tool configuration that loads by itself**: `.claude/`, `.mcp.json`, `.vscode/`, `.devcontainer/`, and a `CLAUDE.md` or `CLAUDE.local.md` in any folder. Claude Code reads a `CLAUDE.md` as instructions and runs the hooks in `.claude/settings.json` on the computer of whoever starts a session on the branch, so a feature that added one could steer the reviewer or run commands on the owner's machine without anyone running its code.
+`CLAUDE.md`, the rules in `process/` (`README.md` and every phase's `guide.md` and `template.md`), `tools/check_guardrails.py`, `tools/run_checks.py`, `tools/check_feature.py`, `package.json` (it holds the command that runs the JavaScript tests), `.github/` (workflows and CODEOWNERS), the Content-Security-Policy meta tag in the HTML files, and **tool configuration that loads by itself**: `.mcp.json`, `.vscode/`, `.devcontainer/`, and a `.claude/` folder, a `CLAUDE.md` or a `CLAUDE.local.md` in any folder. Also a **`.gitattributes` in any folder**: it can mark a file as binary, so `git diff` shows "Binary files differ" instead of the change, and the reviewer never sees the code. All of these are matched **without regard to case**: on Windows and macOS a branch's `Tools/x.py` is written into the real `tools/` folder on checkout, and `claude.md` opens as `CLAUDE.md`. Claude Code reads a `CLAUDE.md` as instructions and runs the hooks in `.claude/settings.json` on the computer of whoever starts a session on the branch, so a feature that added one could steer the reviewer or run commands on the owner's machine without anyone running its code.
 
 **The protected-paths check.** Every guide uses this one command (with `<ref>` the branch being checked); its output must be empty:
 
 ```
-git diff --name-only origin/main...<ref> -- tools/ package.json .github/ process/README.md "process/*/guide.md" "process/*/template.md" .claude/ .mcp.json .vscode/ .devcontainer/ ":(glob)**/CLAUDE.md" ":(glob)**/CLAUDE.local.md"
+git --icase-pathspecs diff --name-only origin/main...<ref> -- tools/ package.json .github/ process/README.md "process/*/guide.md" "process/*/template.md" .mcp.json .vscode/ .devcontainer/ ":(glob)**/.claude/**" ":(glob)**/CLAUDE.md" ":(glob)**/CLAUDE.local.md" ":(glob)**/.gitattributes"
 ```
 
 Sessions that work on an existing feature branch run it **before checking the branch out**, against `origin/feature/<id>` after `git fetch origin`, because a checkout alone is enough for those files to take effect. If it is not empty, the session stops without checking out, and tells the person running the session and the owner which files it found. The CSP is checked separately (phase 3 guide, Step 1). The `output/` folders and `process/INDEX.md` are **not** protected: they are where a feature's own sessions write, and `tools/check_feature.py` allows a feature to touch only its own id's folders and its own `INDEX.md` line. A feature that needs a protected path to change is an **owner-only change**. The rule is enforced by CODEOWNERS and by `tools/check_feature.py`.
@@ -229,7 +229,7 @@ Sessions that work on an existing feature branch run it **before checking the br
 **Ruleset settings to switch on** (GitHub: Settings → Rules → Rulesets → the ruleset on `main`). Keep everything already on (pull request required, status check `test` required, no force pushes, no deletion), and add:
 
 1. **Require a pull request before merging → Required approvals: 1.** No one can merge a pull request without an approval.
-2. **Dismiss stale pull request approvals when new commits are pushed.** Without it, the owner's phase 1 approval of a proposal would still count after the code is added, and a member could merge unreviewed code.
+2. **Dismiss stale pull request approvals when new commits are pushed.** Without it, the owner's phase 1 approval of a proposal would still count after the code is added, and a member could merge unreviewed code. (`tools/check_feature.py` still accepts that dismissed review as the approval of the *proposal*, as long as the proposal it approved is unchanged; it never lets it count for merging.)
 3. **Require review from Code Owners.** The approval must come from the account in `.github/CODEOWNERS`, not from any member with write access.
 4. **Bypass list: add the Repository admin role, mode "For pull requests only".** GitHub does not let anyone approve their own pull request, so without this the owner could not merge their own (decision 12), including deploy and stop records a session opened under the owner's account. "For pull requests only" keeps direct pushes to `main` blocked for the owner too.
 

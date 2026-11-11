@@ -28,7 +28,7 @@ Find the feature pull request: `gh pr list --state all --head feature/<id> --jso
 **The approval.** The merged pull request counts as approved when one of these holds:
 - `owner-approved`: the owner's newest review has state `APPROVED` and its `commit.oid` equals `headRefOid` (the commit that was merged);
 - `owner-authored`: the owner opened the pull request and merged it (README decision 12);
-- `keep`: the owner's newest `keep` or `revert` comment on the merged pull request is `keep` (see **Merged without approval**).
+- `keep`: the owner's newest `keep` or `revert` comment written **after the merge** is `keep` (see **Merged without approval**). A comment from before the merge that happens to start with "keep" does not count.
 
 If none holds, the approval is `missing`: go to Step 1 anyway, so the facts are recorded, and then to **Merged without approval** instead of Step 2.
 
